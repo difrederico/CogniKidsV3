@@ -1,83 +1,131 @@
-from flask import Blueprint, request, jsonify
-# Remova a importação de flask_jwt_extended se não for usada diretamente aqui
-# from flask_jwt_extended import jwt_required, get_jwt_identity
-from app.Utils.decorators import token_required # Supondo que você use seu decorator personalizado
-from pymongo import MongoClient
-import os
-from bson.objectid import ObjectId
-import datetime
+"""
+Kit de Apoio do aluno.
 
-# Inicializa o Blueprint
+Reune informacoes que orientam a resposta a uma crise: neurodivergencia,
+interesses, sensibilidades, estrategias de acalmamento e contatos de
+emergencia. E mantido pelo responsavel e consultado pelo professor da turma.
+
+Estes sao os dados mais sensiveis do sistema, entao a leitura exige vinculo
+comprovado: a versao anterior liberava para qualquer professor autenticado.
+"""
+
+import datetime
+import logging
+
+from flask import Blueprint, request
+
+from app import mongo
+from app.Utils.authz import filhos_do_responsavel, pode_ver_aluno, to_object_id
+from app.Utils.decorators import responsavel_required, token_required
+from app.Utils.responses import (
+    dados_invalidos,
+    erro_interno,
+    nao_autorizado,
+    nao_encontrado,
+    sucesso,
+)
+
+logger = logging.getLogger(__name__)
+
 support_kit_bp = Blueprint('support_kit_bp', __name__)
 
-# Conexão com o DB (Se estiver a usar a fábrica de aplicação, o 'mongo' virá do app/__init__.py)
-client = MongoClient(os.getenv('MONGO_URI'))
-db = client.get_database("cognikidsDB")
 
-# Coleções
-support_kits_collection = db.support_kits
-users_collection = db.users
-
-@support_kit_bp.route('/<string:aluno_id>', methods=['POST', 'PUT'])
-@token_required # Usando o decorator personalizado
-def upsert_support_kit(current_user, aluno_id): # current_user é injetado pelo decorator
-    """
-    Cria ou atualiza o Kit de Apoio de um aluno.
-    Apenas o pai/responsável associado pode executar esta ação.
-    """
-    # A verificação de tipo de utilizador e permissão é crucial
-    if current_user.get('tipo') != 'pai' or ObjectId(aluno_id) not in current_user.get('filhos_ids', []):
-        return jsonify({"msg": "Acesso não autorizado"}), 403
-
-    data = request.get_json()
-    
-    kit_data = {
-        "aluno_id": ObjectId(aluno_id),
-        "neurodivergencia": data.get("neurodivergencia", ""), # <<< CAMPO ADICIONADO
-        "interesses": data.get("interesses", []),
-        "sensibilidades": data.get("sensibilidades", []),
-        "estrategias_calmantes": data.get("estrategias_calmantes", ""),
-        "contatos_emergencia": data.get("contatos_emergencia", []),
-        "last_updated": datetime.datetime.utcnow(),
-        "updated_by": ObjectId(current_user['_id'])
+def _serializar(kit):
+    last_updated = kit.get('last_updated')
+    return {
+        '_id': str(kit.get('_id')),
+        'aluno_id': str(kit.get('aluno_id')),
+        'neurodivergencia': kit.get('neurodivergencia', ''),
+        'interesses': kit.get('interesses', []),
+        'sensibilidades': kit.get('sensibilidades', []),
+        'estrategias_calmantes': kit.get('estrategias_calmantes', ''),
+        'contatos_emergencia': kit.get('contatos_emergencia', []),
+        'observacoes': kit.get('observacoes', ''),
+        'last_updated': last_updated.isoformat() if last_updated else None,
+        'updated_by': str(kit['updated_by']) if kit.get('updated_by') else None,
     }
 
-    support_kits_collection.update_one(
-        {"aluno_id": ObjectId(aluno_id)},
-        {"$set": kit_data},
-        upsert=True
-    )
 
-    return jsonify({"msg": "Kit de Apoio atualizado com sucesso!"}), 200
+@support_kit_bp.route('/<string:aluno_id>', methods=['POST', 'PUT'])
+@token_required
+@responsavel_required
+def upsert_support_kit(current_user, aluno_id):
+    """Cria ou atualiza o Kit de Apoio. Apenas o responsavel vinculado."""
+    try:
+        aluno_oid = to_object_id(aluno_id)
+        if aluno_oid is None:
+            return dados_invalidos('ID do aluno invalido')
+
+        if aluno_oid not in filhos_do_responsavel(current_user):
+            return nao_autorizado('Este aluno nao esta vinculado a voce')
+
+        data = request.get_json(silent=True) or {}
+
+        kit_data = {
+            'aluno_id': aluno_oid,
+            'neurodivergencia': data.get('neurodivergencia', ''),
+            'interesses': data.get('interesses', []),
+            'sensibilidades': data.get('sensibilidades', []),
+            'estrategias_calmantes': data.get('estrategias_calmantes', ''),
+            'contatos_emergencia': data.get('contatos_emergencia', []),
+            'observacoes': data.get('observacoes', ''),
+            'last_updated': datetime.datetime.utcnow(),
+            'updated_by': current_user['_id'],
+        }
+
+        mongo.db.support_kits.update_one(
+            {'aluno_id': aluno_oid}, {'$set': kit_data}, upsert=True
+        )
+
+        return sucesso(message='Kit de Apoio atualizado com sucesso!')
+
+    except Exception as e:
+        return erro_interno(e, 'ao atualizar kit de apoio')
 
 
 @support_kit_bp.route('/<string:aluno_id>', methods=['GET'])
 @token_required
 def get_support_kit(current_user, aluno_id):
-    """
-    Consulta o Kit de Apoio de um aluno.
-    Acessível por professores do aluno e seus responsáveis.
-    """
-    aluno_id_obj = ObjectId(aluno_id)
-    
-    # Verificação de permissão
-    is_responsavel = current_user.get('tipo') == 'pai' and aluno_id_obj in current_user.get('filhos_ids', [])
-    
-    # Para o professor, a verificação precisa ser mais robusta.
-    # Idealmente, o professor teria uma lista de alunos_ids
-    is_professor = current_user.get('tipo') == 'professor' # Simplificado por agora
-    
-    if not is_responsavel and not is_professor:
-        return jsonify({"msg": "Acesso não autorizado"}), 403
+    """Consulta o Kit de Apoio.
 
-    kit = support_kits_collection.find_one({"aluno_id": aluno_id_obj})
-    
-    if not kit:
-        return jsonify({"msg": "Kit de Apoio não encontrado para este aluno."}), 404
-        
-    # Converte ObjectId para string para ser serializável em JSON
-    kit['_id'] = str(kit['_id'])
-    kit['aluno_id'] = str(kit['aluno_id'])
-    kit['updated_by'] = str(kit['updated_by'])
-    
-    return jsonify(kit), 200
+    Acessivel ao responsavel vinculado e ao professor da turma do aluno.
+    """
+    try:
+        aluno_oid = to_object_id(aluno_id)
+        if aluno_oid is None:
+            return dados_invalidos('ID do aluno invalido')
+
+        if not pode_ver_aluno(current_user, aluno_oid):
+            return nao_autorizado('Acesso nao autorizado ao kit deste aluno')
+
+        kit = mongo.db.support_kits.find_one({'aluno_id': aluno_oid})
+        if not kit:
+            return nao_encontrado('Kit de Apoio nao encontrado para este aluno.')
+
+        return sucesso(data=_serializar(kit))
+
+    except Exception as e:
+        return erro_interno(e, 'ao buscar kit de apoio')
+
+
+@support_kit_bp.route('/<string:aluno_id>', methods=['DELETE'])
+@token_required
+@responsavel_required
+def delete_support_kit(current_user, aluno_id):
+    """Remove o Kit de Apoio. Apenas o responsavel vinculado."""
+    try:
+        aluno_oid = to_object_id(aluno_id)
+        if aluno_oid is None:
+            return dados_invalidos('ID do aluno invalido')
+
+        if aluno_oid not in filhos_do_responsavel(current_user):
+            return nao_autorizado('Este aluno nao esta vinculado a voce')
+
+        resultado = mongo.db.support_kits.delete_one({'aluno_id': aluno_oid})
+        if resultado.deleted_count == 0:
+            return nao_encontrado('Kit de Apoio nao encontrado')
+
+        return sucesso(message='Kit de Apoio removido com sucesso')
+
+    except Exception as e:
+        return erro_interno(e, 'ao remover kit de apoio')

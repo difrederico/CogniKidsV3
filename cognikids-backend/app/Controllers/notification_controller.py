@@ -1,12 +1,44 @@
+"""
+Notificacoes do usuario.
+
+NotificationService (no fim do arquivo) e usado por outros controllers para
+gerar notificacoes automaticas de mensagens, notas e eventos.
+"""
+
+import logging
+
 from flask import request, jsonify, Blueprint
-from app.Utils.decorators import token_required
+
 from app.Models.notification_model import Notification
 from app.Models.user_model import User
-from bson.objectid import ObjectId
+from app.Utils.decorators import token_required
+from app.Utils.responses import erro_interno, nao_encontrado, sucesso
+
+logger = logging.getLogger(__name__)
 
 notification_blueprint = Blueprint("notification", __name__)
 notification_model = Notification()
 user_model = User()
+
+
+def _serializar(notif):
+    """Converte uma notificacao para o formato de resposta da API."""
+    created_at = notif.get("created_at")
+    read_at = notif.get("read_at")
+    return {
+        "_id": str(notif["_id"]),
+        "title": notif.get("title"),
+        "message": notif.get("message"),
+        "type": notif.get("type", "info"),
+        "priority": notif.get("priority", "medium"),
+        "read": notif.get("read", False),
+        "action_url": notif.get("action_url"),
+        "action_text": notif.get("action_text"),
+        "related_to": str(notif["related_to"]) if notif.get("related_to") else None,
+        "related_type": notif.get("related_type"),
+        "created_at": created_at.isoformat() if created_at else None,
+        "read_at": read_at.isoformat() if read_at else None,
+    }
 
 
 @notification_blueprint.route("/notifications", methods=["GET"])
@@ -97,28 +129,7 @@ def get_notifications(current_user):
 
         unread_count = notification_model.get_unread_count(str(current_user["_id"]))
 
-        processed_notifications = []
-        for notif in notifications:
-            processed_notifications.append(
-                {
-                    "_id": str(notif["_id"]),
-                    "title": notif["title"],
-                    "message": notif["message"],
-                    "type": notif["type"],
-                    "priority": notif.get("priority", "medium"),
-                    "read": notif["read"],
-                    "action_url": notif.get("action_url"),
-                    "action_text": notif.get("action_text"),
-                    "related_to": str(notif["related_to"])
-                    if notif.get("related_to")
-                    else None,
-                    "related_type": notif.get("related_type"),
-                    "created_at": notif["created_at"].isoformat(),
-                    "read_at": notif.get("read_at", {}).isoformat()
-                    if notif.get("read_at")
-                    else None,
-                }
-            )
+        processed_notifications = [_serializar(n) for n in notifications]
 
         return jsonify(
             {
@@ -130,7 +141,7 @@ def get_notifications(current_user):
         ), 200
 
     except Exception as e:
-        return jsonify({"status": "erro", "message": str(e)}), 500
+        return erro_interno(e, "ao listar notificacoes")
 
 
 @notification_blueprint.route("/notifications/<notification_id>/read", methods=["PUT"])
@@ -183,7 +194,7 @@ def mark_notification_read(current_user, notification_id):
         ), 200
 
     except Exception as e:
-        return jsonify({"status": "erro", "message": str(e)}), 500
+        return erro_interno(e, "em notificacoes")
 
 
 @notification_blueprint.route("/notifications/read-all", methods=["PUT"])
@@ -224,7 +235,7 @@ def mark_all_notifications_read(current_user):
         ), 200
 
     except Exception as e:
-        return jsonify({"status": "erro", "message": str(e)}), 500
+        return erro_interno(e, "em notificacoes")
 
 
 @notification_blueprint.route("/notifications/<notification_id>", methods=["DELETE"])
@@ -274,7 +285,7 @@ def delete_notification(current_user, notification_id):
         ), 200
 
     except Exception as e:
-        return jsonify({"status": "erro", "message": str(e)}), 500
+        return erro_interno(e, "em notificacoes")
 
 
 @notification_blueprint.route("/notifications/unread-count", methods=["GET"])
@@ -306,7 +317,7 @@ def get_unread_count(current_user):
         return jsonify({"status": "sucesso", "count": count}), 200
 
     except Exception as e:
-        return jsonify({"status": "erro", "message": str(e)}), 500
+        return erro_interno(e, "em notificacoes")
 
 
 @notification_blueprint.route("/notifications/recent", methods=["GET"])
@@ -346,23 +357,13 @@ def get_recent_notifications(current_user):
             str(current_user["_id"]), hours
         )
 
-        processed_notifications = []
-        for notif in notifications:
-            processed_notifications.append(
-                {
-                    "_id": str(notif["_id"]),
-                    "title": notif["title"],
-                    "message": notif["message"],
-                    "type": notif["type"],
-                    "read": notif["read"],
-                    "created_at": notif["created_at"].isoformat(),
-                }
-            )
-
-        return jsonify({"status": "sucesso", "data": processed_notifications}), 200
+        return jsonify({
+            "status": "sucesso",
+            "data": [_serializar(n) for n in notifications],
+        }), 200
 
     except Exception as e:
-        return jsonify({"status": "erro", "message": str(e)}), 500
+        return erro_interno(e, "em notificacoes")
 
 
 # Serviço utilitário para criar notificações automaticamente

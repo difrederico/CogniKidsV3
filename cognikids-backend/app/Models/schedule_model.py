@@ -32,7 +32,24 @@ class Schedule:
         query = {"is_active": True}
         if filters:
             query.update(filters)
-            
+
+        return list(mongo.db.events.find(query).sort("start_date", 1))
+
+    def get_events_by_filter(self, query_filter=None, start_date=None, end_date=None):
+        """
+        Busca eventos aplicando um filtro de permissao ja montado pelo
+        controller, opcionalmente restrito a uma janela de datas.
+        """
+        query = dict(query_filter or {})
+        query["is_active"] = True
+
+        if start_date and end_date:
+            query["start_date"] = {"$gte": start_date, "$lte": end_date}
+        elif start_date:
+            query["start_date"] = {"$gte": start_date}
+        elif end_date:
+            query["start_date"] = {"$lte": end_date}
+
         return list(mongo.db.events.find(query).sort("start_date", 1))
     
     def get_event_by_id(self, event_id):

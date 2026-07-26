@@ -1,232 +1,282 @@
 # app/Controllers/iot_controller.py
-from flask import Blueprint, request, jsonify
-from app import mongo
-from app.Utils.validators import validate_object_id
-from bson.objectid import ObjectId
+"""
+Camada de Percepcao/Aplicacao: ingestao de dados dos dispositivos IoT e
+consulta de leituras e alertas.
+
+A ingestao (POST /data) e autenticada por X-API-Key, porque quem chama e a
+pulseira, nao um usuario. As consultas usam JWT e respeitam o vinculo do
+usuario com o aluno.
+"""
+
 import datetime
+import hmac
+import logging
 import os
 
-# Inicializa o Blueprint
+from bson.objectid import ObjectId
+from flask import Blueprint, request
+
+from app import mongo
+from app.Models.alert_model import Alert, RegistroIoT, normalizar_biometria
+from app.Models.consent_model import COLETA_BIOMETRICA
+from app.Utils.authz import (
+    alunos_visiveis,
+    consentimento_permite,
+    pode_ver_aluno,
+    to_object_id,
+)
+from app.Utils.decorators import token_required
+from app.Utils.responses import (
+    dados_invalidos,
+    erro,
+    erro_interno,
+    nao_autorizado,
+    nao_encontrado,
+    sucesso,
+)
+
+logger = logging.getLogger(__name__)
+
 iot_bp = Blueprint('iot_bp', __name__)
+
+alert_model = Alert()
+registro_model = RegistroIoT()
+
+
+def _api_key_valida(chave_recebida):
+    """Compara a API key em tempo constante."""
+    esperada = os.getenv('SECRET_API_KEY')
+    if not esperada or not chave_recebida:
+        return False
+    return hmac.compare_digest(str(chave_recebida), str(esperada))
+
 
 @iot_bp.route('/data', methods=['POST'])
 def receber_dados_iot():
-    """
-    Endpoint para receber dados de dispositivos IoT.
-    Protegido por chave X-API-Key.
-    """
+    """Recebe dados de dispositivos IoT. Protegido por X-API-Key."""
     try:
-        # VALIDAÇÃO DA API KEY - Agora usando a variável de ambiente
-        api_key = request.headers.get('X-API-Key')
-        expected_key = os.getenv('SECRET_API_KEY')
-        if not api_key or api_key != expected_key:
-            return jsonify({"status": "erro", "message": "API Key inválida ou ausente"}), 401
-        
-        data = request.get_json()
+        if not _api_key_valida(request.headers.get('X-API-Key')):
+            return erro('API Key invalida ou ausente', 401)
+
+        data = request.get_json(silent=True)
         if not data or 'dispositivo_id' not in data or 'dados_biometricos' not in data:
-            return jsonify({"status": "erro", "message": "Dados ausentes: dispositivo_id e dados_biometricos são obrigatórios"}), 400
+            return dados_invalidos(
+                'Dados ausentes: dispositivo_id e dados_biometricos sao obrigatorios'
+            )
 
-        dispositivo_id = data['dispositivo_id']
+        dispositivo_oid = to_object_id(data['dispositivo_id'])
+        if dispositivo_oid is None:
+            return dados_invalidos('ID do dispositivo invalido')
+
         dados_biometricos = data['dados_biometricos']
-
-        # Validação do ObjectId
-        if not validate_object_id(dispositivo_id):
-            return jsonify({"status": "erro", "message": "ID do dispositivo inválido"}), 400
-
-        # Validação básica dos dados biométricos
         if not isinstance(dados_biometricos, dict) or not dados_biometricos:
-            return jsonify({"status": "erro", "message": "Dados biométricos devem ser um objeto não vazio"}), 400
+            return dados_invalidos('Dados biometricos devem ser um objeto nao vazio')
 
-        # 1. Verifica se o dispositivo existe e obtém o ID do aluno
-        dispositivo = mongo.db.dispositivos.find_one({"_id": ObjectId(dispositivo_id)})
+        dispositivo = mongo.db.dispositivos.find_one({'_id': dispositivo_oid})
         if not dispositivo:
-            return jsonify({"status": "erro", "message": "Dispositivo não registrado"}), 404
-        
+            return nao_encontrado('Dispositivo nao registrado')
+
         aluno_id = dispositivo.get('aluno_id')
         if not aluno_id:
-            return jsonify({"status": "erro", "message": "Dispositivo não associado a nenhum aluno"}), 400
+            return dados_invalidos('Dispositivo nao associado a nenhum aluno')
 
-        # 2. Cria o novo registro de dados
-        novo_registro = {
-            "dispositivo_id": ObjectId(dispositivo_id),
-            "aluno_id": ObjectId(aluno_id),
-            "data_hora": datetime.datetime.utcnow(),
-            "dados_biometricos": dados_biometricos,
-            "processado": False  # Flag para processamento posterior
-        }
-        
-        # 3. Insere o registro no banco de dados
-        resultado = mongo.db.registros_iot.insert_one(novo_registro)
-        
-        # 4. Atualiza o status do dispositivo (última conexão)
+        # Base legal: sem consentimento vigente do responsavel para coleta
+        # biometrica, o dado e descartado na porta de entrada. Revogar tem
+        # efeito imediato (LGPD art. 8o, §5o).
+        if not consentimento_permite(aluno_id, COLETA_BIOMETRICA):
+            logger.info(
+                'Leitura descartada: sem consentimento biometrico para o aluno %s',
+                aluno_id,
+            )
+            return erro(
+                'Coleta biometrica nao autorizada para este aluno', 403,
+                motivo='consentimento_ausente',
+            )
+
+        resultado = registro_model.create({
+            'aluno_id': aluno_id,
+            'dispositivo_id': dispositivo_oid,
+            'dados_biometricos': dados_biometricos,
+            'processado': False,
+        })
+
         mongo.db.dispositivos.update_one(
-            {"_id": ObjectId(dispositivo_id)},
-            {"$set": {
-                "ultima_conexao": datetime.datetime.utcnow(), 
-                "status": "ativo",
-                "ultimo_registro_id": resultado.inserted_id
-            }}
+            {'_id': dispositivo_oid},
+            {'$set': {
+                'ultima_conexao': datetime.datetime.utcnow(),
+                'status': 'ativo',
+                'ultimo_registro_id': resultado.inserted_id,
+            }},
         )
-        
-        return jsonify({
-            "status": "sucesso", 
-            "message": "Dados recebidos com sucesso!",
-            "registro_id": str(resultado.inserted_id)
-        }), 201
+
+        return sucesso(
+            message='Dados recebidos com sucesso!',
+            status_code=201,
+            registro_id=str(resultado.inserted_id),
+        )
 
     except Exception as e:
-        return jsonify({
-            "status": "erro", 
-            "message": "Erro interno ao salvar os dados", 
-            "error": str(e)
-        }), 500
+        return erro_interno(e, 'ao salvar dados IoT')
+
 
 @iot_bp.route('/dispositivos/<aluno_id>', methods=['GET'])
-def listar_dispositivos_aluno(aluno_id):
-    """Listar dispositivos de um aluno específico"""
+@token_required
+def listar_dispositivos_aluno(current_user, aluno_id):
+    """Lista os dispositivos de um aluno."""
     try:
-        if not validate_object_id(aluno_id):
-            return jsonify({"status": "erro", "message": "ID do aluno inválido"}), 400
+        aluno_oid = to_object_id(aluno_id)
+        if aluno_oid is None:
+            return dados_invalidos('ID do aluno invalido')
 
-        dispositivos = list(mongo.db.dispositivos.find({"aluno_id": ObjectId(aluno_id)}))
-        
-        # Converter ObjectId para string para serialização JSON
-        for dispositivo in dispositivos:
-            dispositivo['_id'] = str(dispositivo['_id'])
-            dispositivo['aluno_id'] = str(dispositivo['aluno_id'])
-        
-        return jsonify({
-            "status": "sucesso",
-            "dispositivos": dispositivos
-        }), 200
+        if not pode_ver_aluno(current_user, aluno_oid):
+            return nao_autorizado('Acesso nao autorizado aos dados deste aluno')
+
+        dispositivos = []
+        for d in mongo.db.dispositivos.find({'aluno_id': aluno_oid}):
+            ultima = d.get('ultima_conexao')
+            dispositivos.append({
+                '_id': str(d['_id']),
+                'aluno_id': str(d['aluno_id']),
+                'status': d.get('status', 'desconhecido'),
+                'ultima_conexao': ultima.isoformat() if ultima else None,
+            })
+
+        return sucesso(data=dispositivos, dispositivos=dispositivos)
 
     except Exception as e:
-        return jsonify({
-            "status": "erro",
-            "message": "Erro ao buscar dispositivos",
-            "error": str(e)
-        }), 500
+        return erro_interno(e, 'ao buscar dispositivos')
+
 
 @iot_bp.route('/registros/<aluno_id>', methods=['GET'])
-def listar_registros_aluno(aluno_id):
-    """Listar registros IoT de um aluno específico"""
+@token_required
+def listar_registros_aluno(current_user, aluno_id):
+    """Lista as leituras biometricas de um aluno (paginado)."""
     try:
-        if not validate_object_id(aluno_id):
-            return jsonify({"status": "erro", "message": "ID do aluno inválido"}), 400
+        aluno_oid = to_object_id(aluno_id)
+        if aluno_oid is None:
+            return dados_invalidos('ID do aluno invalido')
 
-        # Parâmetros de paginação opcionais
-        limite = request.args.get('limite', 50, type=int)
-        pagina = request.args.get('pagina', 1, type=int)
-        skip = (pagina - 1) * limite
+        if not pode_ver_aluno(current_user, aluno_oid):
+            return nao_autorizado('Acesso nao autorizado aos dados deste aluno')
 
-        registros = list(mongo.db.registros_iot.find(
-            {"aluno_id": ObjectId(aluno_id)}
-        ).sort("data_hora", -1).skip(skip).limit(limite))
-        
-        # Converter ObjectId para string
-        for registro in registros:
-            registro['_id'] = str(registro['_id'])
-            registro['dispositivo_id'] = str(registro['dispositivo_id'])
-            registro['aluno_id'] = str(registro['aluno_id'])
-        
-        return jsonify({
-            "status": "sucesso",
-            "registros": registros,
-            "pagina": pagina,
-            "limite": limite
-        }), 200
+        limite = max(1, min(request.args.get('limite', 50, type=int) or 50, 500))
+        pagina = max(1, request.args.get('pagina', 1, type=int) or 1)
+
+        registros = registro_model.find_by_aluno(
+            aluno_oid, limite=limite, pular=(pagina - 1) * limite
+        )
+        serializados = [RegistroIoT.serializar(r) for r in registros]
+
+        return sucesso(
+            data=serializados,
+            registros=serializados,
+            pagina=pagina,
+            limite=limite,
+            total=registro_model.count_by_aluno(aluno_oid),
+        )
 
     except Exception as e:
-        return jsonify({
-            "status": "erro",
-            "message": "Erro ao buscar registros",
-            "error": str(e)
-        }), 500
+        return erro_interno(e, 'ao buscar registros')
+
 
 @iot_bp.route('/crisis-alerts', methods=['GET'])
-def get_crisis_alerts():
-    """
-    Retorna alertas de crise para professores.
-    Um alerta de crise é gerado quando:
-    - heart_rate > 120 OU
-    - eda > 3.0
+@token_required
+def get_crisis_alerts(current_user):
+    """Alertas de crise recentes dos alunos visiveis ao usuario.
+
+    Le da colecao 'alerts', que e onde o alert_monitor grava as crises
+    detectadas pelo modelo. Antes esta rota consultava 'registros_iot'
+    filtrando por heart_rate/eda, campos que o pipeline nunca gravou.
     """
     try:
-        # Aplicar autenticação manualmente
-        token = None
-        if 'Authorization' in request.headers:
-            token = request.headers['Authorization'].split(" ")[1] if len(request.headers['Authorization'].split(" ")) > 1 else None
-        
-        if not token:
-            return jsonify({"status": "erro", "message": "Token ausente"}), 401
-        
-        import jwt
-        try:
-            data = jwt.decode(token, os.getenv('JWT_SECRET_KEY'), algorithms=['HS256'])
-            current_user = mongo.db.users.find_one({"_id": ObjectId(data['user_id'])})
-            if not current_user:
-                return jsonify({"status": "erro", "message": "Usuário não encontrado"}), 401
-        except Exception:
-            return jsonify({"status": "erro", "message": "Token inválido"}), 401
-        
-        # Verificar se é professor
-        if current_user.get('tipo') != 'professor':
-            return jsonify({"status": "erro", "message": "Acesso negado. Apenas professores."}), 403
-        
-        # Buscar turmas do professor
-        turmas_ids = current_user.get('turmas_ids', [])
-        if not turmas_ids:
-            return jsonify({"status": "sucesso", "alerts": []}), 200
-        
-        # Buscar alunos das turmas do professor
-        alunos = list(mongo.db.users.find({
-            "tipo": {"$in": ["aluno", "estudante"]},  # Aceitar ambos os tipos
-            "turma_id": {"$in": turmas_ids}
-        }))
-        
-        alunos_ids = [aluno['_id'] for aluno in alunos]
-        
-        # Buscar registros IoT dos últimos 30 minutos que indicam crise
-        from datetime import timedelta
-        time_threshold = datetime.datetime.utcnow() - timedelta(minutes=30)
-        
-        registros_crise = list(mongo.db.registros_iot.find({
-            "aluno_id": {"$in": alunos_ids},
-            "data_hora": {"$gte": time_threshold},
-            "$or": [
-                {"dados_biometricos.heart_rate": {"$gt": 120}},
-                {"dados_biometricos.eda": {"$gt": 3.0}}
-            ]
-        }).sort("data_hora", -1))
-        
-        # Formatar alertas
-        alerts = []
-        for registro in registros_crise:
-            aluno = next((a for a in alunos if a['_id'] == registro['aluno_id']), None)
-            if aluno:
-                alerts.append({
-                    "student_id": str(registro['aluno_id']),
-                    "student_name": aluno.get('nome', 'Desconhecido'),
-                    "heart_rate": registro['dados_biometricos'].get('heart_rate'),
-                    "eda": registro['dados_biometricos'].get('eda'),
-                    "timestamp": registro['data_hora'].isoformat(),
-                    "severity": "high" if (
-                        registro['dados_biometricos'].get('heart_rate', 0) > 130 or 
-                        registro['dados_biometricos'].get('eda', 0) > 4.0
-                    ) else "medium"
-                })
-        
-        return jsonify({
-            "status": "sucesso",
-            "alerts": alerts,
-            "count": len(alerts)
-        }), 200
-        
+        alunos_ids = alunos_visiveis(current_user)
+        if not alunos_ids:
+            return sucesso(data=[], alerts=[], count=0)
+
+        minutos = max(1, min(request.args.get('minutos', 30, type=int) or 30, 1440))
+        desde = datetime.datetime.utcnow() - datetime.timedelta(minutes=minutos)
+
+        alertas = alert_model.find_by_alunos(alunos_ids, desde=desde)
+
+        nomes = {
+            u['_id']: u.get('nome', 'Desconhecido')
+            for u in mongo.db.users.find(
+                {'_id': {'$in': list(alunos_ids)}}, {'nome': 1}
+            )
+        }
+
+        resultado = []
+        for alerta in alertas:
+            serializado = Alert.serializar(alerta)
+            serializado['student_id'] = serializado['aluno_id']
+            serializado['student_name'] = nomes.get(alerta['aluno_id'], 'Desconhecido')
+            serializado['heart_rate'] = serializado['bpm']
+            serializado['eda'] = serializado['gsr']
+            serializado['timestamp'] = serializado['data_hora']
+            resultado.append(serializado)
+
+        return sucesso(data=resultado, alerts=resultado, count=len(resultado))
+
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({
-            "status": "erro",
-            "message": "Erro ao buscar alertas de crise",
-            "error": str(e)
-        }), 500
+        return erro_interno(e, 'ao buscar alertas de crise')
+
+
+@iot_bp.route('/alerts/<alert_id>/resolve', methods=['PUT'])
+@token_required
+def resolver_alerta(current_user, alert_id):
+    """Marca um alerta de crise como resolvido."""
+    try:
+        alerta = alert_model.find_by_id(alert_id)
+        if not alerta:
+            return nao_encontrado('Alerta nao encontrado')
+
+        if not pode_ver_aluno(current_user, alerta.get('aluno_id')):
+            return nao_autorizado('Acesso nao autorizado a este alerta')
+
+        alert_model.marcar_resolvido(alert_id, current_user['_id'])
+        return sucesso(message='Alerta marcado como resolvido')
+
+    except Exception as e:
+        return erro_interno(e, 'ao resolver alerta')
+
+
+@iot_bp.route('/dispositivos', methods=['POST'])
+@token_required
+def registrar_dispositivo(current_user):
+    """Registra uma pulseira e a associa a um aluno."""
+    try:
+        from app.Utils.roles import normalizar_tipo, PROFESSOR, ADMIN
+
+        if normalizar_tipo(current_user.get('tipo')) not in (PROFESSOR, ADMIN):
+            return nao_autorizado('Apenas professores podem registrar dispositivos')
+
+        data = request.get_json(silent=True) or {}
+        aluno_oid = to_object_id(data.get('aluno_id'))
+        if aluno_oid is None:
+            return dados_invalidos('aluno_id e obrigatorio e deve ser valido')
+
+        if not pode_ver_aluno(current_user, aluno_oid):
+            return nao_autorizado('Acesso nao autorizado a este aluno')
+
+        documento = {
+            'aluno_id': aluno_oid,
+            'status': 'ativo',
+            'ultima_conexao': None,
+            'registrado_em': datetime.datetime.utcnow(),
+            'registrado_por': current_user['_id'],
+        }
+        if data.get('dispositivo_id'):
+            dispositivo_oid = to_object_id(data['dispositivo_id'])
+            if dispositivo_oid is None:
+                return dados_invalidos('dispositivo_id invalido')
+            documento['_id'] = dispositivo_oid
+
+        resultado = mongo.db.dispositivos.insert_one(documento)
+        return sucesso(
+            message='Dispositivo registrado com sucesso',
+            status_code=201,
+            dispositivo_id=str(resultado.inserted_id),
+        )
+
+    except Exception as e:
+        return erro_interno(e, 'ao registrar dispositivo')

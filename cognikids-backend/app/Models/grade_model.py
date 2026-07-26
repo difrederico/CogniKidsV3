@@ -2,6 +2,16 @@ from app import mongo
 from bson.objectid import ObjectId
 import datetime
 
+
+def _to_object_id(valor):
+    if isinstance(valor, ObjectId):
+        return valor
+    try:
+        return ObjectId(valor)
+    except Exception:
+        return None
+
+
 class Grade:
     def create_assignment(self, assignment_data):
         """
@@ -47,10 +57,91 @@ class Grade:
         """
         Busca todas as avaliações de uma turma
         """
+        class_oid = _to_object_id(class_id)
+        if class_oid is None:
+            return []
         return list(mongo.db.assignments.find({
-            "class_id": ObjectId(class_id),
+            "class_id": class_oid,
             "is_active": True
         }).sort("due_date", 1))
+
+    # Alias usado pelo grade_controller
+    get_assignments_by_class = get_class_assignments
+
+    def delete_assignment(self, assignment_id):
+        """
+        Desativa uma avaliação (soft delete)
+        """
+        oid = _to_object_id(assignment_id)
+        if oid is None:
+            return None
+        return mongo.db.assignments.update_one(
+            {"_id": oid}, {"$set": {"is_active": False}}
+        )
+
+    def update_assignment(self, assignment_id, update_data):
+        """
+        Atualiza uma avaliação
+        """
+        oid = _to_object_id(assignment_id)
+        if oid is None:
+            return None
+        protegidos = {'_id', 'class_id', 'created_by', 'created_at'}
+        dados = {k: v for k, v in (update_data or {}).items() if k not in protegidos}
+        if not dados:
+            return None
+        return mongo.db.assignments.update_one({"_id": oid}, {"$set": dados})
+
+    def get_grade_by_id(self, grade_id):
+        """
+        Busca uma nota por ID
+        """
+        oid = _to_object_id(grade_id)
+        if oid is None:
+            return None
+        return mongo.db.grades.find_one({"_id": oid})
+
+    def delete_grade(self, grade_id):
+        """
+        Remove uma nota
+        """
+        oid = _to_object_id(grade_id)
+        if oid is None:
+            return None
+        return mongo.db.grades.delete_one({"_id": oid})
+
+    @staticmethod
+    def serializar_nota(nota):
+        """Converte uma nota para o formato de resposta da API."""
+        graded_at = nota.get('graded_at')
+        return {
+            '_id': str(nota.get('_id')),
+            'assignment_id': str(nota.get('assignment_id')),
+            'student_id': str(nota.get('student_id')),
+            'class_id': str(nota.get('class_id')),
+            'score': nota.get('score'),
+            'feedback': nota.get('feedback', ''),
+            'comments': nota.get('comments', ''),
+            'is_absent': nota.get('is_absent', False),
+            'graded_at': graded_at.isoformat() if graded_at else None,
+        }
+
+    @staticmethod
+    def serializar_avaliacao(avaliacao):
+        """Converte uma avaliação para o formato de resposta da API."""
+        created_at = avaliacao.get('created_at')
+        return {
+            '_id': str(avaliacao.get('_id')),
+            'title': avaliacao.get('title'),
+            'description': avaliacao.get('description', ''),
+            'type': avaliacao.get('type'),
+            'class_id': str(avaliacao.get('class_id')),
+            'subject': avaliacao.get('subject'),
+            'max_score': avaliacao.get('max_score'),
+            'due_date': avaliacao.get('due_date'),
+            'weight': avaliacao.get('weight', 1.0),
+            'created_at': created_at.isoformat() if created_at else None,
+        }
     
     def get_student_grades(self, student_id, class_id=None):
         """

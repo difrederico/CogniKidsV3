@@ -10,7 +10,7 @@ Etapas testadas:
 1. Conexão com MQTT (Mosquitto)
 2. Publicação do payload real da pulseira
 3. Verificação no Redis (fila iot_queue)
-4. Verificação no MongoDB (collections iot_raw_data e alerts)
+4. Verificação no MongoDB (collections registros_iot e alerts)
 =============================================================================
 """
 
@@ -18,6 +18,7 @@ import paho.mqtt.client as mqtt
 import json
 import time
 import redis
+from bson.objectid import ObjectId
 from pymongo import MongoClient
 from datetime import datetime
 import pytz
@@ -204,46 +205,44 @@ def testar_mongodb(timestamp_inicio):
         for i in range(20):
             time.sleep(0.5)
             
-            # Verifica iot_raw_data
-            raw_data = db.iot_raw_data.find_one(
-                {"dispositivo_id": DEVICE_ID},
+            # Verifica o data lake (colecao canonica lida pela API)
+            raw_data = db.registros_iot.find_one(
+                {"dispositivo_id": ObjectId(DEVICE_ID)},
                 sort=[("_id", -1)]
             )
-            
-            if raw_data and raw_data.get("timestamp_original_unix", 0) >= timestamp_inicio:
-                if not encontrou_raw:
-                    print_success("Dados encontrados em 'iot_raw_data'!")
-                    print_info(f"ID: {raw_data.get('_id')}")
-                    print_info(f"Dispositivo: {raw_data.get('dispositivo_id')}")
-                    print_info(f"BPM: {raw_data.get('dados_biometricos', {}).get('bpm')}")
-                    print_info(f"Movement Score: {raw_data.get('dados_biometricos', {}).get('movement_score')}")
-                    print_info(f"Timestamp SP: {raw_data.get('timestamp_pulseira_sp')}")
-                    encontrou_raw = True
-            
-            # Verifica alerts
+
+            if raw_data and not encontrou_raw:
+                print_success("Dados encontrados em 'registros_iot'!")
+                print_info(f"ID: {raw_data.get('_id')}")
+                print_info(f"Aluno: {raw_data.get('aluno_id')}")
+                bio = raw_data.get('dados_biometricos', {})
+                print_info(f"BPM: {bio.get('bpm')}")
+                print_info(f"GSR: {bio.get('gsr')}")
+                print_info(f"Movement Score: {bio.get('movement_score')}")
+                print_info(f"Data/hora: {raw_data.get('data_hora')}")
+                encontrou_raw = True
+
+            # Verifica alertas gerados pelo modelo de ML
             alert = db.alerts.find_one(
-                {"dispositivo_id": DEVICE_ID},
+                {"dispositivo_id": ObjectId(DEVICE_ID)},
                 sort=[("_id", -1)]
             )
-            
-            if alert:
-                # Verifica se é recente (criado após início do teste)
-                created = alert.get("created_at")
-                if created and created.timestamp() >= timestamp_inicio:
-                    if not encontrou_alert:
-                        print_success("Alerta gerado em 'alerts'!")
-                        print_info(f"Tipo: {alert.get('tipo_alerta')}")
-                        print_info(f"Severidade: {alert.get('severidade')}")
-                        print_info(f"Descrição: {alert.get('descricao')}")
-                        encontrou_alert = True
-            
+
+            if alert and not encontrou_alert:
+                print_success("Alerta gerado em 'alerts'!")
+                print_info(f"Aluno: {alert.get('aluno_id')}")
+                print_info(f"Severidade: {alert.get('severity')}")
+                print_info(f"Motivo: {alert.get('motivo')}")
+                print_info(f"Confianca ML: {alert.get('ml_confidence')}")
+                encontrou_alert = True
+
             if encontrou_raw:
                 break
-        
+
         client.close()
-        
+
         if not encontrou_raw:
-            print_warning("Dados não encontrados em iot_raw_data")
+            print_warning("Dados não encontrados em registros_iot")
             print_info("O consumer pode precisar ser reiniciado para pegar as mudanças")
         
         if not encontrou_alert:

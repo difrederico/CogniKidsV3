@@ -100,3 +100,10 @@ logs/
 # --- Configurações específicas que NÃO devem ser versionadas ---
 cognikids-pulseira-m5stack/config.py
 cognikids-front-end/data/
+
+# --- Uploads de usuarios (galeria de criacoes) ---
+cognikids-backend/uploads/
+
+# --- Modelo de ML treinado (gerar com scripts/utils/train_model.py) ---
+*.joblib
+model.joblib

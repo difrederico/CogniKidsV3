@@ -98,8 +98,8 @@ def gerar_alerta_crise(aluno, tipo_crise):
     timestamp = datetime.utcnow()
     
     alerta = {
-        'aluno_id': aluno['id'],  # Campo correto para o backend
-        'student_id': aluno['id'],  # Campo adicional para compatibilidade
+        # 'aluno_id' e a chave canonica lida pela API e pelo dashboard
+        'aluno_id': aluno['id'],
         'device_id': aluno['device_id'],
         'data_hora': timestamp,  # Campo correto para o backend (UTC!)
         'alert_type': 'crisis',

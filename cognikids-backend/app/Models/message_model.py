@@ -2,14 +2,24 @@ from app import mongo
 from bson.objectid import ObjectId
 import datetime
 
+
+def _to_object_id(valor):
+    if isinstance(valor, ObjectId):
+        return valor
+    try:
+        return ObjectId(valor)
+    except Exception:
+        return None
+
+
 class Message:
     def create_message(self, from_user_id, to_user_id, content, message_type="text", priority="normal"):
         """
         Criar nova mensagem com mais metadados
         """
         return mongo.db.messages.insert_one({
-            "from_user_id": ObjectId(from_user_id),
-            "to_user_id": ObjectId(to_user_id),
+            "from_user_id": _to_object_id(from_user_id),
+            "to_user_id": _to_object_id(to_user_id),
             "content": content,
             "type": message_type,  # text, alert, announcement, urgent
             "priority": priority,  # normal, high, urgent
@@ -25,8 +35,8 @@ class Message:
         """
         query = {
             "$or": [
-                {"from_user_id": ObjectId(user_id)},
-                {"to_user_id": ObjectId(user_id)}
+                {"from_user_id": _to_object_id(user_id)},
+                {"to_user_id": _to_object_id(user_id)}
             ]
         }
         
@@ -57,13 +67,15 @@ class Message:
     
     def mark_as_read(self, message_id, user_id):
         """
-        Marcar mensagem como lida
+        Marcar mensagem como lida (apenas o destinatario)
         """
+        msg_oid = _to_object_id(message_id)
+        user_oid = _to_object_id(user_id)
+        if msg_oid is None or user_oid is None:
+            return None
+
         return mongo.db.messages.update_one(
-            {
-                "_id": ObjectId(message_id),
-                "to_user_id": ObjectId(user_id)
-            },
+            {"_id": msg_oid, "to_user_id": user_oid},
             {"$set": {"read": True}}
         )
     
@@ -85,7 +97,7 @@ class Message:
         Contar mensagens não lidas
         """
         return mongo.db.messages.count_documents({
-            "to_user_id": ObjectId(user_id),
+            "to_user_id": _to_object_id(user_id),
             "read": False
         })
     
@@ -93,12 +105,17 @@ class Message:
         """
         Deletar mensagem (apenas para o usuário)
         """
+        msg_oid = _to_object_id(message_id)
+        user_oid = _to_object_id(user_id)
+        if msg_oid is None or user_oid is None:
+            return None
+
         return mongo.db.messages.update_one(
             {
-                "_id": ObjectId(message_id),
+                "_id": msg_oid,
                 "$or": [
-                    {"from_user_id": ObjectId(user_id)},
-                    {"to_user_id": ObjectId(user_id)}
+                    {"from_user_id": user_oid},
+                    {"to_user_id": user_oid}
                 ]
             },
             {"$set": {"deleted": True}}

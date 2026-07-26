@@ -70,13 +70,22 @@ alunosInfo.forEach(function(aluno, alunoIdx) {
         const severities = ['low', 'medium', 'high'];
         const severity = severities[Math.floor(Math.random() * severities.length)];
         
+        const bpm = randomBPM(severity);
+        const gsr = randomGSR(severity);
+
+        // Formato canonico: 'aluno_id' (nao 'student_id') e as leituras
+        // dentro de 'dados_biometricos'. E assim que o alert_monitor grava
+        // e o que a API le — divergir aqui torna o alerta invisivel.
         const alerta = {
-            student_id: aluno.id,
+            aluno_id: aluno.id,
             student_name: aluno.nome,
             data_hora: randomDate(30),
             severity: severity,
-            bpm: randomBPM(severity),
-            gsr: randomGSR(severity),
+            dados_biometricos: {
+                bpm: bpm,
+                gsr: gsr,
+                movement_score: 0
+            },
             motivo: motivos[Math.floor(Math.random() * motivos.length)],
             resolvido: Math.random() > 0.3, // 70% resolvidos
             resolved_at: null,
@@ -108,5 +117,5 @@ print("Alertas na collection 'alerts': " + totalAlertas);
 // Mostra alguns exemplos
 print("\n=== EXEMPLOS DE ALERTAS ===");
 db.alerts.find({ demo: true }).limit(3).forEach(function(a) {
-    print("  - " + a.student_name + ": " + a.severity + " | BPM: " + a.bpm.toFixed(1) + " | " + a.data_hora);
+    print("  - " + a.student_name + ": " + a.severity + " | BPM: " + a.dados_biometricos.bpm.toFixed(1) + " | " + a.data_hora);
 });
