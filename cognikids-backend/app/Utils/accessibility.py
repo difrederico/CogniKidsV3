@@ -83,8 +83,17 @@ CATALOGO = [
         'opcoes': [
             {'valor': 'nao', 'rotulo': 'Nao', 'tokens': {}},
             {'valor': 'as_vezes', 'rotulo': 'As vezes', 'tokens': {'espacamento': 'amplo'}},
+            # 'texto': 'so_figura' saiu daqui de proposito. Cansar-se de texto
+            # longo se trata FATIANDO (passo_unico), nao REMOVENDO a letra:
+            # combinado com leitura='com_ajuda', o valor anterior resolvia para
+            # so_figura e a crianca que le com esforco perdia a letra por
+            # completo — perdia pratica de leitura por ter respondido com
+            # honestidade sobre fadiga. Quem realmente nao le chega a so_figura
+            # pelas perguntas 'leitura' e 'comunicacao_verbal', que e onde essa
+            # decisao pertence.
             {'valor': 'sim', 'rotulo': 'Sim',
-             'tokens': {'espacamento': 'amplo', 'texto': 'so_figura', 'audio_disponivel': True}},
+             'tokens': {'espacamento': 'amplo', 'passo_unico': True,
+                        'audio_disponivel': True}},
         ],
     },
     {
@@ -309,7 +318,17 @@ def resolver_tokens(respostas, ajustes_crianca=None):
     Returns:
         dict de tokens prontos para o front aplicar.
     """
-    tokens = dict(TOKENS_PADRAO)
+    # As respostas se conciliam ENTRE SI (o mais conservador entre elas); o
+    # padrao so preenche o que nenhuma resposta declarou. Antes, cada
+    # resposta era comparada direto contra TOKENS_PADRAO — que ja nasce quase
+    # no extremo protetivo — entao uma unica resposta pedindo algo menos
+    # protetivo nunca vencia, mesmo sem nenhuma outra resposta pedindo mais
+    # protecao. Auditoria do conselho (ADR-011): 3 respostas legitimas
+    # (ex.: nao ter sensibilidade sensorial nenhuma) ficavam sem efeito por
+    # essa causa. Comparar so entre respostas corrige os 3 casos sem afrouxar
+    # a protecao quando ha conflito real (ex.: TEA + busca de estimulo
+    # continua resolvendo para o mais calmo).
+    declarados = {}
     por_id = {item['id']: item for item in CATALOGO}
 
     for chave, valor in (respostas or {}).items():
@@ -322,10 +341,13 @@ def resolver_tokens(respostas, ajustes_crianca=None):
             continue
 
         for token, novo in opcao.get('tokens', {}).items():
-            if token in tokens:
-                tokens[token] = _mais_conservador(token, tokens[token], novo)
+            if token in declarados:
+                declarados[token] = _mais_conservador(token, declarados[token], novo)
             else:
-                tokens[token] = novo
+                declarados[token] = novo
+
+    tokens = dict(TOKENS_PADRAO)
+    tokens.update(declarados)
 
     # A crianca ajusta por cima, dentro dos limites permitidos
     for token, valor in (ajustes_crianca or {}).items():
@@ -338,20 +360,89 @@ def resolver_tokens(respostas, ajustes_crianca=None):
 
 
 def dimensoes_atendidas(respostas):
-    """Dimensoes com pelo menos uma necessidade sinalizada.
+    """Dimensoes em que a resposta produziu EFEITO REAL na interface.
 
     Serve para o responsavel e o professor entenderem o perfil sem que o
     sistema nomeie nenhum diagnostico.
+
+    A versao anterior olhava os tokens DECLARADOS na opcao, nao o efeito. Como
+    TOKENS_PADRAO ja nasce quase no extremo protetivo e _mais_conservador
+    nunca afrouxa, varias respostas declaram um token e nao mudam nada — e a
+    dimensao era reportada como atendida mesmo assim. Medido: 'busca_estimulo'
+    e 'linguagem_literal' nao alteram token nenhum sob nenhuma resposta, e
+    ainda assim marcavam 'sensorial' e 'previsibilidade'.
+
+    Isso importa alem da UI: a escola usa este campo como evidencia de
+    adaptacao razoavel (LBI art. 3o, III), que se afere pelo efeito concreto.
+    Reportar dimensao sem efeito e registro falso.
     """
     por_id = {item['id']: item for item in CATALOGO}
+    padrao = resolver_tokens({})
     dimensoes = set()
 
     for chave, valor in (respostas or {}).items():
         item = por_id.get(chave)
         if not item:
             continue
-        opcao = next((o for o in item['opcoes'] if o['valor'] == valor), None)
-        if opcao and opcao.get('tokens'):
+        resolvidos = resolver_tokens({chave: valor})
+        if any(padrao.get(token) != v for token, v in resolvidos.items()):
             dimensoes.add(item['dimensao'])
 
     return sorted(dimensoes)
+
+
+def respostas_sem_efeito(respostas):
+    """Respostas que o responsavel deu e que nao mudaram nada na interface.
+
+    Existe para a UI poder ser honesta com quem respondeu: sem isso, o
+    responsavel preenche o questionario e nunca descobre que parte do que ele
+    declarou foi descartado.
+
+    A pergunta certa nao e "esta resposta, sozinha, difere do padrao?" — e
+    "se eu tirasse so esta resposta, o resultado final mudaria?" (retirada
+    isolada, contra o conjunto completo de respostas). Sao coisas diferentes:
+    apos a correcao de precedencia (ADR-011), 'busca_estimulo=sim' passou a
+    ter efeito SOZINHA (pede estimulo:vivo). Mas se o responsavel tambem
+    respondeu 'sensibilidade_sensorial=sim' (que pede calmo, mais protetivo),
+    o resultado final e calmo com ou sem a resposta de busca_estimulo — ela
+    continua sem efeito NAQUELE contexto, e e isso que a pessoa precisa saber.
+
+    Retorna [{id, dimensao, valor, motivo}].
+    """
+    por_id = {item['id']: item for item in CATALOGO}
+    padrao = resolver_tokens({})
+    completo = resolver_tokens(respostas)
+    sem_efeito = []
+
+    for chave, valor in (respostas or {}).items():
+        item = por_id.get(chave)
+        if not item:
+            continue
+        opcao = next((o for o in item['opcoes'] if o['valor'] == valor), None)
+        if not opcao:
+            continue
+
+        sem_esta_resposta = {k: v for k, v in respostas.items() if k != chave}
+        resultado_sem_ela = resolver_tokens(sem_esta_resposta)
+        if resultado_sem_ela != completo:
+            continue  # tirar esta resposta muda o resultado -> ela importa
+
+        pedidos = opcao.get('tokens', {})
+        isolada = resolver_tokens({chave: valor})
+        tem_efeito_isolado = any(padrao.get(t) != v for t, v in isolada.items())
+
+        if not pedidos:
+            motivo = 'esta resposta nao pede nenhum ajuste'
+        elif not tem_efeito_isolado:
+            motivo = 'a configuracao padrao ja e igual ou mais protetiva'
+        else:
+            motivo = 'outra resposta ja garante protecao igual ou maior'
+
+        sem_efeito.append({
+            'id': chave,
+            'dimensao': item['dimensao'],
+            'valor': valor,
+            'motivo': motivo,
+        })
+
+    return sem_efeito

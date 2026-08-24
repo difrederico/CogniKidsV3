@@ -246,6 +246,40 @@ def alunos_visiveis(current_user):
     return set()
 
 
+def pode_enviar_mensagem(remetente, destinatario):
+    """Existe vinculo pedagogico/familiar comprovado entre os dois usuarios?
+
+    Os dois canais suportados sao professor<->responsavel e professor<->aluno
+    (ver message_controller.py). Sem isso, qualquer professor autenticado
+    podia mandar mensagem direta para qualquer aluno do sistema, mesmo fora
+    de suas turmas — corrigido aqui, reaproveitando as mesmas regras de
+    vinculo+consentimento ja usadas para leitura de dados do aluno.
+    """
+    tipo_remetente = normalizar_tipo(remetente.get('tipo'))
+    tipo_destinatario = normalizar_tipo(destinatario.get('tipo'))
+
+    if tipo_remetente == PROFESSOR:
+        professor, outro = remetente, destinatario
+    elif tipo_destinatario == PROFESSOR:
+        professor, outro = destinatario, remetente
+    else:
+        return False
+
+    tipo_outro = normalizar_tipo(outro.get('tipo'))
+
+    if tipo_outro == ESTUDANTE:
+        return pode_ver_aluno(professor, outro.get('_id'))
+
+    if tipo_outro == RESPONSAVEL:
+        comuns = filhos_do_responsavel(outro) & alunos_do_professor(professor)
+        if not comuns:
+            return False
+        from app.Models.consent_model import COMPARTILHAR_ESCOLA
+        return any(consentimento_permite(filho_id, COMPARTILHAR_ESCOLA) for filho_id in comuns)
+
+    return False
+
+
 def consentimento_permite(aluno_id, finalidade):
     """Ha consentimento vigente desta finalidade para este aluno?
 

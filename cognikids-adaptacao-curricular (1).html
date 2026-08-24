@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>CogniKids — Protótipo Completo</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css">
+<style>
+:root{
+  --bg:#F0F4F1;--sf:#FFF;--sf2:#EBF0EC;--sf0:#E0E8E2;
+  --bd:#C8D5CB;--bds:#A8BEAd;
+  --tx:#1A2B1E;--txs:#3D5445;--txm:#7A9280;
+  --ac:#2D6A4F;--acl:#D8EEE4;--act:#1B4332;
+  --ok:#166534;--okl:#DCFCE7;--okb:#16A34A;
+  --wn:#92400E;--wnl:#FEF3C7;--wnb:#D97706;
+  --rd:#DC2626;--rdl:#FEE2E2;--rdb:#EF4444;
+  --pu:#4C1D95;--pul:#EDE9FE;--pub:#7C3AED;
+  --am:#F59E0B;--aml:#FEF9C3;
+  --new:#0891B2;--newl:#E0F7FA;--newb:#0E7490;
+  --fn:'Helvetica Neue',Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);font-family:var(--fn);min-height:100vh;display:flex;justify-content:center}
+.wrap{width:100%;max-width:430px;min-height:100vh;background:var(--sf);display:flex;flex-direction:column}
+.sbar{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font-size:12px;color:var(--txm);border-bottom:.5px solid var(--bd);flex-shrink:0}
+.scr{display:none;flex-direction:column;flex:1;overflow:hidden}
+.scr.on{display:flex}
+.scrl{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.tbar{padding:14px 16px 10px;display:flex;align-items:center;gap:10px;border-bottom:.5px solid var(--bd);flex-shrink:0;background:var(--sf)}
+.bk{background:none;border:none;cursor:pointer;color:var(--txs);font-size:20px;padding:4px 6px;border-radius:8px;display:flex;align-items:center}
+.bk:active{background:var(--sf2)}
+.tbt{font-size:16px;font-weight:600;color:var(--tx);flex:1}
+.bdg{font-size:11px;padding:3px 10px;border-radius:20px;background:var(--acl);color:var(--act);font-weight:500;white-space:nowrap}
+.bdg-new{background:var(--newl);color:var(--newb);font-size:11px;padding:3px 10px;border-radius:20px;font-weight:700;white-space:nowrap}
+.cnt{padding:16px;display:flex;flex-direction:column;gap:14px}
+.card{background:var(--sf);border-radius:14px;border:.5px solid var(--bd);padding:16px}
+.card-sm{background:var(--sf2);border-radius:8px;border:.5px solid var(--bd);padding:12px 14px}
+.card-new{background:var(--sf);border-radius:14px;border:2px solid var(--new);padding:16px;position:relative}
+.card-new::before{content:'NOVO ✦';position:absolute;top:-10px;left:16px;background:var(--new);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:.5px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.bw{height:6px;border-radius:3px;background:var(--bd);overflow:hidden}
+.bf{height:100%;border-radius:3px;transition:width .5s}
+.row{display:flex;align-items:center;gap:12px}
+.col{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}
+.lbl{font-size:12px;color:var(--txs)}
+.val{font-size:22px;font-weight:700;color:var(--tx);line-height:1.1}
+.vsm{font-size:15px;font-weight:600;color:var(--tx)}
+.mut{font-size:12px;color:var(--txm)}
+.sec{font-size:11px;font-weight:700;color:var(--txm);text-transform:uppercase;letter-spacing:.6px}
+.sec-new{font-size:11px;font-weight:700;color:var(--newb);text-transform:uppercase;letter-spacing:.6px;display:flex;align-items:center;gap:6px}
+.dv{height:.5px;background:var(--bd)}
+.alr{border-radius:8px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start}
+.aw{background:var(--wnl);border:.5px solid var(--wnb)}.aw .ico,.aw .at{color:var(--wn)}
+.as{background:var(--okl);border:.5px solid var(--okb)}.as .ico,.as .at{color:var(--ok)}
+.ai{background:var(--acl);border:.5px solid var(--ac)}.ai .ico,.ai .at{color:var(--act)}
+.ap{background:var(--pul);border:.5px solid var(--pub)}.ap .ico,.ap .at{color:var(--pu)}
+.an{background:var(--newl);border:.5px solid var(--new)}.an .ico,.an .at{color:var(--newb)}
+.ico{font-size:18px;flex-shrink:0;margin-top:1px}
+.at{font-size:13px;line-height:1.5}
+.atit{font-size:13px;font-weight:600;margin-bottom:3px}
+.afoot{font-size:11px;margin-top:5px;color:var(--txm)}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border:.5px solid var(--bds);border-radius:8px;padding:12px 16px;font-size:14px;font-weight:500;cursor:pointer;background:var(--sf);color:var(--tx);font-family:var(--fn)}
+.btn:active{background:var(--sf2)}
+.bacc{background:var(--ac);color:#fff;border-color:var(--ac)}
+.bacc:active{background:var(--act)}
+.bnew{background:var(--new);color:#fff;border-color:var(--new)}
+.bsec{background:var(--acl);color:var(--act);border-color:var(--ac)}
+.bsm{font-size:12px;padding:7px 12px;border-radius:8px;width:auto}
+.nav{height:68px;border-top:.5px solid var(--bd);display:flex;align-items:center;background:var(--sf);flex-shrink:0}
+.nb{flex:1;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:none;border:none;cursor:pointer;color:var(--txm);font-size:10px;font-family:var(--fn);font-weight:500}
+.nb.on{color:var(--ac)}
+.nb i{font-size:20px}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:4px 10px;border-radius:20px;border:.5px solid var(--bd);font-weight:500;white-space:nowrap}
+.cs{background:var(--okl);color:var(--ok);border-color:var(--okb)}
+.cw{background:var(--wnl);color:var(--wn);border-color:var(--wnb)}
+.ca{background:var(--acl);color:var(--act);border-color:var(--ac)}
+.cp{background:var(--pul);color:var(--pu);border-color:var(--pub)}
+.cn{background:var(--sf2);color:var(--txs)}
+.cnew{background:var(--newl);color:var(--newb);border-color:var(--new)}
+.cr{background:var(--rdl);color:var(--rd);border-color:var(--rdb)}
+.pc{width:100%;background:var(--sf);border-radius:14px;border:.5px solid var(--bd);padding:18px;display:flex;align-items:center;gap:14px;cursor:pointer}
+.pc:active{background:var(--sf2)}
+.emb{width:54px;height:54px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0}
+.tabs{display:flex;border-bottom:.5px solid var(--bd);flex-shrink:0;background:var(--sf);overflow-x:auto}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex-shrink:0;padding:10px 14px;font-size:12px;font-weight:500;cursor:pointer;color:var(--txm);border:none;background:none;border-bottom:2.5px solid transparent;font-family:var(--fn);white-space:nowrap}
+.tab.on{color:var(--ac);border-bottom-color:var(--ac)}
+.tab-new{color:var(--newb)!important}
+.tab-new.on{border-bottom-color:var(--new)!important;color:var(--newb)!important}
+textarea,input[type=text]{width:100%;border:.5px solid var(--bds);border-radius:8px;padding:12px 14px;font-size:14px;font-family:var(--fn);background:var(--sf2);color:var(--tx);outline:none;resize:none}
+textarea:focus,input[type=text]:focus{border-color:var(--ac)}
+select{width:100%;border:.5px solid var(--bds);border-radius:8px;padding:10px 14px;font-size:14px;font-family:var(--fn);background:var(--sf2);color:var(--tx);outline:none}
+.token-row{display:flex;align-items:center;gap:10px;padding:8px 0}
+.tk-lbl{font-size:13px;color:var(--txs);flex:1}
+.tk-val{font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px}
+.tk-ok{background:var(--okl);color:var(--ok)}
+.tk-wn{background:var(--wnl);color:var(--wn)}
+.tk-ac{background:var(--acl);color:var(--act)}
+.loading{position:fixed;inset:0;background:rgba(255,255,255,.95);display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:999}
+.loading.on{display:flex}
+.spin{width:44px;height:44px;border:3px solid var(--bd);border-top-color:var(--ac);border-radius:50%;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.steps{display:flex;gap:3px;margin-bottom:4px}
+.sdot{flex:1;height:3px;border-radius:2px;background:var(--bd)}
+.sdot.on{background:var(--ac)}
+.orig-box{background:var(--sf2);border-radius:8px;padding:12px 14px;border-left:3px solid var(--txm)}
+.orig-box .ob-l{font-size:10px;font-weight:700;color:var(--txm);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
+.orig-box p{font-size:13px;color:var(--txs);line-height:1.6}
+.adap-box{background:var(--acl);border-radius:8px;padding:12px 14px;border-left:3px solid var(--ac)}
+.adap-box .ob-l{font-size:10px;font-weight:700;color:var(--act);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
+.adap-box p{font-size:13px;color:var(--act);line-height:1.8}
+.adap-box .xai{font-size:11px;color:var(--ac);margin-top:8px;font-style:italic}
+.msg-list{display:flex;flex-direction:column;gap:8px}
+.msg-item{border:.5px solid var(--bd);border-radius:10px;padding:12px 14px;cursor:pointer}
+.msg-item:active{background:var(--sf2)}
+.msg-item.unread{border-color:var(--ac);background:var(--acl)}
+.chat-wrap{display:flex;flex-direction:column;flex:1;overflow:hidden}
+.chat-msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+.bubble{border-radius:16px;padding:10px 14px;font-size:14px;line-height:1.5;max-width:85%}
+.bme{background:var(--ac);color:#fff;border-bottom-right-radius:4px;align-self:flex-end}
+.bth{background:var(--sf2);color:var(--tx);border-bottom-left-radius:4px;align-self:flex-start}
+.chat-in{padding:12px 16px;border-top:.5px solid var(--bd);display:flex;gap:8px;align-items:center;flex-shrink:0}
+.chat-in input{flex:1;border:.5px solid var(--bds);border-radius:24px;padding:8px 14px;font-size:14px;font-family:var(--fn);background:var(--sf2);color:var(--tx);outline:none}
+.chat-snd{width:38px;height:38px;border-radius:50%;background:var(--ac);color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.alert-item{border:.5px solid var(--bd);border-radius:10px;padding:12px 14px;cursor:pointer;margin-bottom:8px}
+.break-opt{border:.5px solid var(--bd);border-radius:10px;padding:14px;cursor:pointer;display:flex;align-items:center;gap:12px}
+.break-opt:active{background:var(--sf2)}
+.break-opt.sel{border-color:var(--ac);background:var(--acl)}
+.goal-item{display:flex;gap:10px;align-items:flex-start;padding:8px 0}
+.goal-cb{width:22px;height:22px;border-radius:6px;border:.5px solid var(--bds);display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;margin-top:2px}
+.goal-cb.done{background:var(--ac);border-color:var(--ac)}
+.notif-item{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:8px;cursor:pointer}
+.notif-item.unr{background:var(--acl)}
+.notif-dot{width:8px;height:8px;border-radius:50%;background:var(--ac);flex-shrink:0;margin-top:5px}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--tx);color:#fff;border-radius:10px;padding:10px 18px;font-size:13px;z-index:9999;white-space:nowrap;pointer-events:none;animation:fu .2s}
+@keyframes fu{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.new-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 7px;border-radius:20px;background:var(--new);color:#fff;font-weight:700;margin-left:6px;vertical-align:middle}
+.hist-item{border:.5px solid var(--bd);border-radius:10px;padding:12px 14px;cursor:pointer;margin-bottom:8px}
+.hist-item:active{background:var(--sf2)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="sbar"><span>9:41</span><span style="font-weight:700;color:var(--tx)">CogniKids</span><span>●●● 100%</span></div>
+
+<!-- LOADING -->
+<div class="loading" id="loading">
+  <div class="spin"></div>
+  <div style="font-size:14px;font-weight:500;color:var(--txs)" id="sp-txt">Processando...</div>
+  <div class="mut" id="sp-sub"></div>
+</div>
+
+<!-- SPLASH -->
+<div class="scr on" id="sc-splash">
+<div class="scrl"><div class="cnt" style="padding:32px 20px;gap:18px">
+  <div style="text-align:center;margin-bottom:4px">
+    <div style="font-size:32px;font-weight:800;letter-spacing:-1px;color:var(--tx)">CogniKids</div>
+    <div class="mut" style="margin-top:4px;font-size:13px">Selecione o perfil</div>
+  </div>
+  <div class="pc" onclick="go('sc-prof-home')">
+    <div class="emb" style="background:#DBEAFE">👩‍🏫</div>
+    <div class="col"><div class="vsm">Profa. Renata</div><div class="mut">Professora · 4º ano B</div></div>
+    <i class="ti ti-chevron-right" style="color:var(--txm);font-size:20px"></i>
+  </div>
+  <div class="pc" onclick="go('sc-parent-home')">
+    <div class="emb" style="background:#D1FAE5">👩</div>
+    <div class="col"><div class="vsm">Ana (mãe)</div><div class="mut">Responsável pelo Lucas</div></div>
+    <i class="ti ti-chevron-right" style="color:var(--txm);font-size:20px"></i>
+  </div>
+  <div class="pc" onclick="go('sc-student-home')">
+    <div class="emb" style="background:#EDE9FE">🧒</div>
+    <div class="col"><div class="vsm">Lucas</div><div class="mut">8 anos · 4º ano B</div></div>
+    <i class="ti ti-chevron-right" style="color:var(--txm);font-size:20px"></i>
+  </div>
+  <div class="alr an" style="margin-top:8px">
+    <i class="ti ti-sparkles ico"></i>
+    <div class="at"><strong>Novo:</strong> Adaptação Curricular com IA — funcionalidades destacadas em azul em cada perfil.</div>
+  </div>
+</div></div>
+</div>
+
+<!-- ============================================================ -->
+<!--                    PERFIL: PROFESSOR                         -->
+<!-- ============================================================ -->
+<div class="scr" id="sc-prof-home">
+<div class="tbar">
+  <button class="bk" onclick="go('sc-splash')"><i class="ti ti-arrow-left"></i></button>
+  <span class="tbt">Profa. Renata</span>
+  <div style="position:relative;cursor:pointer" onclick="go('sc-prof-notif')">
+    <i class="ti ti-bell" style="font-size:22px;color:var(--txs)"></i>
+    <div style="position:absolute;top:-2px;right:-2px;width:8px;height:8px;border-radius:50%;background:var(--rd)"></div>
+  </div>
+</div>
+<div class="tabs">
+  <button class="tab on" onclick="go('sc-prof-home')">Início</button>
+  <button class="tab" onclick="go('sc-prof-turma')">Turma</button>
+  <button class="tab tab-new on-new" onclick="go('sc-prof-adapt-home')" style="color:var(--newb)">✦ Adaptar</button>
+  <button class="tab" onclick="go('sc-prof-agenda')">Agenda</button>
+  <button class="tab" onclick="go('sc-prof-msgs')">Mensagens</button>
+</div>
+<div class="scrl"><div class="cnt">
+  <!-- kpis -->
+  <div class="g2">
+    <div class="card-sm"><div class="lbl">Alunos na turma</div><div class="vsm" style="color:var(--ac);margin-top:3px">24</div><div class="mut">3 com perfil ativo</div></div>
+    <div class="card-sm"><div class="lbl">Alertas hoje</div><div class="vsm" style="color:var(--rd);margin-top:3px">2</div><div class="mut">pulseira IoT</div></div>
+    <div class="card-sm"><div class="lbl">Pausas pendentes</div><div class="vsm" style="color:var(--wn);margin-top:3px">1</div><div class="mut">Lucas · 9h12</div></div>
+    <div class="card-sm"><div class="lbl">Perguntas Q&A</div><div class="vsm" style="color:var(--ac);margin-top:3px">3</div><div class="mut">sem resposta</div></div>
+  </div>
+  <!-- alerta crise -->
+  <div class="alr aw" style="cursor:pointer" onclick="go('sc-prof-alertas')">
+    <i class="ti ti-alert-triangle ico"></i>
+    <div class="at"><div class="atit">2 alertas de crise — pulseira IoT</div>Lucas: BPM 145 às 9h08 · Sofia: GSR elevado às 9h15<div class="afoot">Toque para ver detalhes e resolver</div></div>
+  </div>
+  <!-- pausa pendente -->
+  <div class="alr ap" style="cursor:pointer" onclick="go('sc-prof-pausas')">
+    <i class="ti ti-hand-stop ico"></i>
+    <div class="at"><div class="atit">Lucas pediu uma pausa — 9h12</div>Estratégia sugerida: respiração profunda (funcionou 3x)<div class="afoot">Toque para confirmar e acompanhar</div></div>
+  </div>
+  <!-- novo: adaptação curricular -->
+  <div class="sec-new"><i class="ti ti-sparkles" style="font-size:14px"></i>Adaptação Curricular com IA <span class="new-badge">NOVO</span></div>
+  <div class="card-new" style="cursor:pointer" onclick="go('sc-prof-adapt-home')">
+    <div class="at" style="color:var(--newb);margin-top:6px">Insira qualquer atividade da sua aula — a IA gera uma versão adaptada para cada aluno com perfil ativo, no formato que cada criança processa melhor.</div>
+    <button class="btn bnew" style="margin-top:12px" onclick="event.stopPropagation();go('sc-prof-adapt-nova')"><i class="ti ti-file-plus"></i>Nova atividade adaptada</button>
+  </div>
+  <!-- desafios -->
+  <div class="sec">Desafios ativos</div>
+  <div class="hist-item" onclick="go('sc-prof-desafios')">
+    <div class="row"><div class="col"><div class="vsm">Ler 15 minutos por dia</div><div class="mut">12 de 24 alunos concluíram</div></div><span class="chip ca">Ativo</span></div>
+  </div>
+  <!-- fórum -->
+  <div class="sec">Fórum da turma</div>
+  <div class="hist-item" onclick="go('sc-prof-forum')">
+    <div class="row"><div class="col"><div class="vsm">Atividade da semana — dúvidas?</div><div class="mut">3 novas respostas</div></div><span class="chip cs">Novo</span></div>
+  </div>
+</div></div>
+<div class="nav">
+  <button class="nb on" onclick="go('sc-prof-home')"><i class="ti ti-home"></i>Início</button>
+  <button class="nb" onclick="go('sc-prof-turma')"><i class="ti ti-users"></i>Turma</button>
+  <button class="nb" onclick="go('sc-prof-adapt-home')" style="color:var(--new)"><i class="ti ti-sparkles"></i>Adaptar</button>
+  <button class="nb" onclick="go('sc-prof-msgs')"><i class="ti ti-message"></i>Mensagens</button>
+  <button class="nb" onclick="go('sc-prof-notif')"><i class="ti ti-bell"></i>Avisos</button>
+</div>
+</div>
+
+<!-- PROF: TURMA -->
+<div class="scr" id="sc-prof-turma">
+<div class="tbar"><button class="bk" onclick="go('sc-prof-home')"><i class="ti ti-arrow-left"></i></button><span class="tbt">4º ano B — 24 alunos</span></div>
+<div class="tabs">
+  <button class="tab on">Alunos</button>
+  <button class="tab" onclick="go('sc-prof-notas')">Notas</button>
+  <button class="tab" onclick="go('sc-prof-desafios')">Desafios</button>
+  <button class="tab" onclick="go('sc-prof-galeria-prof')">Galeria</button>
+</div>
+<div class="scrl"><div class="cnt">
+  <div class="alr ai"><i class="ti ti-info-circle ico"></i><div class="at">Alunos com perfil de acessibilidade ativo recebem atividades adaptadas automaticamente pela IA.</div></div>
+  <div class="sec">Com perfil de acessibilidade <span class="new-badge">IA ATIVA</span></div>
+  <div class="card" style="gap:12px">
+    <div class="row" onclick="go('sc-prof-perfil-aluno')" style="cursor:pointer">
+      <div style="width:40px;height:40px;border-radius:50%;background:#EDE9FE;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🧒</div>
+      <div class="col"><div class="vsm">Lucas, 8 anos</div><div class="mut">TEA grau 1 · Passo a passo + Áudio</div></div>
+      <span class="chip cnew">IA ativa</span>
+      <i class="ti ti-chevron-right" style="color:var(--txm);font-size:14px"></i>
+    </div>
+    <div class="dv"></div>
+    <div class="row">
+      <div style="width:40px;height:40px;border-radius:50%;background:#FCE7F3;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">👧</div>
+      <div class="col"><div class="vsm">Sofia, 7 anos</div><div class="mut">TDAH · Texto curto + Checklist</div></div>
+      <span class="chip cnew">IA ativa</span>
+    </div>
+    <div class="dv"></div>
+    <div class="row">
+      <div style="width:40px;height:40px;border-radius:50%;background:#D1FAE5;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">👦</div>
+      <div class="col"><div class="vsm">Pedro, 9 anos</div><div class="mut">Dislexia · Espaçamento + Áudio</div></div>
+      <span class="chip cnew">IA ativa</span>
+    </div>
+  </div>
+  <div class="sec">Demais alunos (21)</div>
+  <div class="card-sm"><div class="mut" style="text-align:center;padding:8px 0">21 alunos sem perfil de acessibilidade · recebem a atividade original</div></div>
+  <button class="btn bacc" onclick="go('sc-prof-adapt-nova')"><i class="ti ti-sparkles"></i>Enviar atividade com adaptação</button>
+</div></div>
+</div>
+
+<!-- PROF: PERFIL DO ALUNO -->
+<div class="scr" id="sc-prof-perfil-aluno">
+<div class="tbar"><button class="bk" onclick="go('sc-prof-turma')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Perfil de acessibilidade · Lucas</span></div>
+<div class="scrl"><div class="cnt">
+  <div class="sec">Perfil sensorial</div>
+  <div class="card" style="gap:2px">
+    <div class="token-row"><span class="tk-lbl">Sensibilidade a sons e luzes</span><span class="tk-val tk-wn">Alta</span></div>
+    <div class="dv"></div>
+    <div class="token-row"><span class="tk-lbl">Som no app</span><span class="tk-val tk-wn">Desativado</span></div>
+    <div class="dv"></div>
+    <div class="token-row"><span class="tk-lbl">Movimento na tela</span><span class="tk-val tk-wn">Nenhum</span></div>
+  </div>
+  <div class="sec">Perfil de linguagem</div>
+  <div class="card" style="gap:2px">
+    <div class="token-row"><span class="tk-lbl">Leitura independente</span><span class="tk-val tk-ac">Com esforço</span></div>
+    <div class="dv"></div>
+    <div class="token-row"><span class="tk-lbl">Áudio de apoio</span><span class="tk-val tk-ok">Recomendado</span></div>
+    <div class="dv"></div>
+    <div class="token-row"><span class="tk-lbl">Textos longos</span><span class="tk-val tk-wn">Dividir em passos</span></div>
+    <div class="dv"></div>
+    <div class="token-row"><span class="tk-lbl">Fonte ampliada</span><span class="tk-val tk-ok">Sim</span></div>
+  </div>
+  <div class="sec">Perfil cognitivo</div>
+  <div class="card" style="gap:2px">
+    <div class="token-row"><span class="tk-lbl">Instrução por vez</span><span class="tk-val tk-wn">1 de cada vez</span></div>
+    <div class="dv"></div>
+    <div class="token-row"><span class="tk-lbl">Exemplos concretos</span><span class="tk-val tk-ok">Necessários</span></div>
+    <div class="dv"></div>
+    <div class="token-row"><span class="tk-lbl">Linguagem abstrata</span><span class="tk-val tk-wn">Evitar</span></div>
+  </div>
+  <div class="sec-new"><i class="ti ti-sparkles" style="font-size:13px"></i>Como a IA usa este perfil <span class="new-badge">NOVO</span></div>
+  <div class="card-new">
+    <div class="at" style="margin-top:6px;color:var(--newb)">Toda atividade enviada para Lucas é automaticamente convertida em passo a passo numerado, com exemplos do cotidiano, áudio disponível em cada passo e fonte ampliada — sem que você precise fazer nada além de enviar a atividade original.</div>
+  </div>
+</div></div>
+</div>
+
+<!-- PROF: NOTAS -->
+<div class="scr" id="sc-prof-notas">
+<div class="tbar"><button class="bk" onclick="go('sc-prof-turma')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Notas e tarefas</span></div>
+<div class="scrl"><div class="cnt">
+  <button class="btn bacc" onclick="toast('Tela de criar tarefa — funcionalidade do backend ✓')"><i class="ti ti-plus"></i>Nova tarefa / avaliação</button>
+  <div class="sec">Tarefas ativas</div>
+  <div class="hist-item"><div class="row"><div class="col"><div class="vsm">Redação — Minha família</div><div class="mut">Entrega: 20/07 · 18 de 24 entregaram</div></div><span class="chip cw">Pendente</span></div></div>
+  <div class="hist-item"><div class="row"><div class="col"><div class="vsm">Prova de matemática</div><div class="mut">Entrega: 15/07 · 24 de 24 entregaram</div></div><span class="chip cs">Concluída</span></div></div>
+  <div class="sec">Notas do Lucas</div>
+  <div class="card" style="gap:8px">
+    <div class="row"><span class="lbl" style="flex:1">Matemática</span><span class="vsm" style="color:var(--ok)">8,5</span></div>
+    <div class="dv"></div>
+    <div class="row"><span class="lbl" style="flex:1">Português</span><span class="vsm" style="color:var(--wn)">6,0</span></div>
+    <div class="dv"></div>
+    <div class="row"><span class="lbl" style="flex:1">Ciências</span><span class="vsm" style="color:var(--ok)">7,5</span></div>
+  </div>
+</div></div>
+</div>
+
+<!-- PROF: ALERTAS IoT -->
+<div class="scr" id="sc-prof-alertas">
+<div class="tbar"><button class="bk" onclick="go('sc-prof-home')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Alertas de crise · pulseira</span></div>
+<div class="scrl"><div class="cnt">
+  <div class="alr aw"><i class="ti ti-activity ico"></i><div class="at"><div class="atit">Lucas — BPM 145 · 9h08</div>Frequência cardíaca elevada. Possível desregulação emocional em andamento.<div class="afoot">Pulseira M5Stack · GSR: 2.8</div></div></div>
+  <button class="btn bacc" onclick="toast('Alerta resolvido e registrado ✓')"><i class="ti ti-check"></i>Marcar como atendido</button>
+  <div class="dv" style="margin:4px 0"></div>
+  <div class="alr aw"><i class="ti ti-activity ico"></i><div class="at"><div class="atit">Sofia — GSR elevado · 9h15</div>Condutância da pele acima do limiar. Sugestão: oferecer pausa.<div class="afoot">Pulseira M5Stack · BPM: 112</div></div></div>
+  <button class="btn" onclick="toast('Alerta resolvido e registrado ✓')"><i class="ti ti-check"></i>Marcar como atendido</button>
+  <div class="sec">Histórico de alertas</div>
+  <div class="alert-item"><div class="row"><div class="col"><div class="vsm">Lucas — BPM 138</div><div class="mut">Ontem · 14h22 · Resolvido</div></div><span class="chip cs">Resolvido</span></div></div>
+  <div class="alert-item"><div class="row"><div class="col"><div class="vsm">Pedro — Movimento alto</div><div class="mut">22/07 · 10h05 · Resolvido</div></div><span class="chip cs">Resolvido</span></div></div>
+</div></div>
+</div>
+
+<!-- PROF: PAUSAS -->
+<div class="scr" id="sc-prof-pausas">
+<div class="tbar"><button class="bk" onclick="go('sc-prof-home')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Pedidos de pausa</span></div>
+<div class="scrl"><div class="cnt">
+  <div class="alr ap"><i class="ti ti-hand-stop ico"></i><div class="at"><div class="atit">Lucas pediu uma pausa — 9h12</div>Estratégia escolhida pelo Lucas: <strong>respiração profunda</strong><div class="afoot">Eficácia histórica: ajudou em 3 de 4 vezes</div></div></div>
+  <button class="btn bacc" onclick="toast('Pausa confirmada — Lucas foi notificado ✓')"><i class="ti ti-check"></i>Confirmar e liberar Lucas</button>
+  <button class="btn" onclick="toast('Encerrado e registrado ✓')"><i class="ti ti-x"></i>Encerrar pausa</button>
+  <div class="sec">Histórico de pausas</div>
+  <div class="alert-item"><div class="row"><div class="col"><div class="vsm">Lucas — respiração</div><div class="mut">Ontem · 15h30 · Ajudou ✓</div></div><span class="chip cs">Eficaz</span></div></div>
+  <div class="alert-item"><div class="row"><div class="col"><div class="vsm">Sofia — andar um pouco</div><div class="mut">22/07 · 11h10 · Parcial</div></div><span class="chip cw">Parcial</span></div></div>
+</div></div>
+</div>
+
+<!-- PROF: MENSAGENS -->
+<div class="scr" id="sc-prof-msgs">
+<div class="tbar"><button class="bk" onclick="go('sc-prof-home')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Mensagens</span></div>
+<div class="scrl"><div class="cnt">
+  <div class="msg-item unread" onclick="go('sc-prof-chat')">
+    <div class="row"><div style="width:38px;height:38px;border-radius:50%;background:#D1FAE5;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">👩</div><div class="col"><div class="vsm">Ana (mãe do Lucas)</div><div class="mut" style="color:var(--act)">Professora, ele estava agitado ontem...</div></div><span class="mut" style="font-size:11px;flex-shrink:0">9h14</span></div>
+  </div>
+  <div class="msg-item">
+    <div class="row"><div style="width:38px;height:38px;border-radius:50%;background:#FCE7F3;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">👩‍👧</div><div class="col"><div class="vsm">Mãe da Sofia</div><div class="mut">Obrigada pelo aviso de ontem</div></div><span class="mut" style="font-size:11px;flex-shrink:0">Ontem</span></div>
+  </div>
+</div></div>
+</div>
+
+<!-- PROF: CHAT -->
+<div class="scr" id="sc-prof-chat" style="flex-direction:column">
+<div class="tbar"><button class="bk" onclick="go('sc-prof-msgs')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Ana · mãe do Lucas</span></div>
+<div class="chat-wrap">
+  <div class="chat-msgs">
+    <div class="bubble bth">Professora, o Lucas estava bem agitado ontem à tarde. Aconteceu algo na aula?</div>
+    <div class="bubble bme">Sim, registramos um alerta pela pulseira às 14h22. Ele pediu uma pausa e se acalmou com respiração. Em 15 minutos voltou bem.</div>
+    <div class="bubble bth">Que bom! Esses alertas me ajudam muito. A atividade de hoje já foi adaptada?</div>
+    <div class="bubble bme">Sim! A atividade de frações chegou para ele em passo a passo com áudio. Ele pode fazer no ritmo dele 😊</div>
+  </div>
+  <div class="chat-in"><input type="text" placeholder="Escreva uma mensagem..." onkeydown="if(event.key==='Enter')sendMsg(this,'sc-prof-chat')"><button class="chat-snd" onclick="sendMsg(this.previousElementSibling,'sc-prof-chat')"><i class="ti ti-send"></i></button></div>
+</div>
+</div>
+
+<!-- PROF: AGENDA -->
+<div class="scr" id="sc-prof-agenda">
+<div class="tbar"><button class="bk" onclick="go('sc-prof-home')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Agenda da turma</span></div>
+<div class="scrl"><div class="cnt">
+  <button class="btn bacc" onclick="toast('Novo evento criado ✓')"><i class="ti ti-plus"></i>Novo evento</button>
+  <div class="sec">Próximos eventos</div>
+  <div class="hist-item"><div class="row"><div style="width:40px;height:40px;border-radius:8px;background:var(--acl);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">📝</div><div class="col"><div class="vsm">Prova de Ciências</div><div class="mut">28/07/2026 · 8h00</div></div></div></div>
+  <div class="hist-item"><div class="row"><div style="width:40px;height:40px;border-radius:8px;background:var(--pul);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🎨</div><div class="col"><div class="vsm">Feira de Ciências</div><div class="mut">05/08/2026 · 9h00</div></div></div></div>
+  <div class="hist-item"><div class="row"><div style="width:40px;height:40px;border-radius:8px;background:var(--okl);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">👪</div><div class="col"><div class="vsm">Reunião de pais</div><div class="mut">10/08/2026 · 19h00</div></div></div></div>
+</div></div>
+</div>
+
+<!-- PROF: DESAFIOS -->
+<div class="scr" id="sc-prof-desafios">
+<div class="tbar"><button class="bk" onclick="go('sc-prof-turma')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Desafios da turma</span></div>
+<div class="scrl"><div class="cnt">
+  <button class="btn bacc" onclick="toast('Novo desafio criado ✓')"><i class="ti ti-plus"></i>Criar novo desafio</button>
+  <div class="hist-item"><div class="row"><div class="col"><div class="vsm">Ler 15 minutos por dia</div><div class="mut">12 de 24 alunos concluíram · Ativo até 31/07</div></div><span class="chip ca">Ativo</span></div><div class="bw" style="margin-top:8px"><div class="bf" style="width:50%;background:var(--ac)"></div></div></div>
+  <div class="hist-item"><div class="row"><div class="col"><div class="vsm">Escrever 3 frases por dia</div><div class="mut">24 de 24 concluíram · Encerrado</div></div><span class="chip cs">Concluído</span></div></div>
+</div></div>
+</div>
+
+<!-- PROF: GALERIA -->
+<div class="scr" id="sc-prof-galeria-prof">
+<div class="tbar"><button class="bk" onclick="go('sc-prof-turma')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Galeria da turma</span></div>
+<div class="scrl"><div class="cnt">
+  <div class="sec">Aguardando aprovação (2)</div>
+  <div class="hist-item"><div class="row"><div style="width:44px;height:44px;border-radius:8px;background:var(--aml);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🖼️</div><div class="col"><div class="vsm">Desenho do Lucas</div><div class="mut">Enviado hoje · 8h45</div></div><div style="display:flex;gap:6px"><button class="btn bacc bsm" onclick="toast('Aprovado! Lucas será notificado ✓')">Aprovar</button></div></div></div>
+  <div class="hist-item"><div class="row"><div style="width:44px;height:44px;border-radius:8px;background:var(--pul);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🖼️</div><div class="col"><div class="vsm">Colagem da Sofia</div><div class="mut">Enviado ontem · 15h22</div></div><div style="display:flex;gap:6px"><button class="btn bacc bsm" onclick="toast('Aprovado! Sofia será notificada ✓')">Aprovar</button></div></div></div>
+  <div class="sec">Galeria aprovada (8)</div>
+  <div class="g3">
+    <div style="aspect-ratio:1;border-radius:10px;background:linear-gradient(135deg,#DBEAFE,#EDE9FE);display:flex;align-items:center;justify-content:center;font-size:28px">🎨</div>
+    <div style="aspect-ratio:1;border-radius:10px;background:linear-gradient(135deg,#D1FAE5,#FEF9C3);display:flex;align-items:center;justify-content:center;font-size:28px">✏️</div>
+    <div style="aspect-ratio:1;border-radius:10px;background:linear-gradient(135deg,#FCE7F3,#FEF3C7);display:flex;align-items:center;justify-content:center;font-size:28px">🖍️</div>
+  </div>
+</div></div>
+</div>
+
+<!-- PROF: FÓRUM -->
+<div class="scr" id="sc-prof-forum">
+<div class="tbar"><button class="bk" onclick="go('sc-prof-home')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Fórum da turma</span></div>
+<div class="scrl"><div class="cnt">
+  <button class="btn bacc" onclick="toast('Novo tópico criado ✓')"><i class="ti ti-plus"></i>Novo tópico</button>
+  <div class="hist-item"><div class="row"><div class="col"><div class="vsm">Atividade da semana — dúvidas?</div><div class="mut">Criado por você · 3 respostas</div></div><span class="chip cs">3 novo</span></div></div>
+  <div class="hist-item"><div class="row"><div class="col"><div class="vsm">Dica de leitura para o verão</div><div class="mut">Criado por Ana · 5 respostas</div></div><span class="chip cn">5 resp.</span></div></div>
+</div></div>
+</div>
+
+<!-- PROF: NOTIFICAÇÕES -->
+<div class="scr" id="sc-prof-notif">
+<div class="tbar"><button class="bk" onclick="go('sc-prof-home')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Notificações</span><button class="btn bsm bsec" onclick="toast('Todas marcadas como lidas ✓')" style="padding:6px 10px;width:auto">Marcar todas</button></div>
+<div class="scrl"><div class="cnt">
+  <div class="notif-item unr"><div class="notif-dot"></div><div class="col"><div class="vsm">Lucas pediu uma pausa — 9h12</div><div class="mut">Pedido de pausa</div></div></div>
+  <div class="notif-item unr"><div class="notif-dot"></div><div class="col"><div class="vsm">Alerta de crise — Sofia · 9h15</div><div class="mut">Pulseira IoT</div></div></div>
+  <div class="notif-item"><div style="width:8px;height:8px;flex-shrink:0;margin-top:5px"></div><div class="col"><div class="vsm">Ana respondeu sua mensagem</div><div class="mut">Mensagens · Ontem</div></div></div>
+  <div class="notif-item"><div style="width:8px;height:8px;flex-shrink:0;margin-top:5px"></div><div class="col"><div class="vsm">3 alunos concluíram o desafio</div><div class="mut">Desafios · Ontem</div></div></div>
+</div></div>
+</div>
+
+<!-- PROF: ADAPT HOME -->
+<div class="scr" id="sc-prof-adapt-home">
+<div class="tbar"><button class="bk" onclick="go('sc-prof-home')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Adaptação Curricular</span><span class="bdg-new">✦ NOVO</span></div>
+<div class="tabs">
+  <button class="tab on" onclick="go('sc-prof-adapt-home')">Início</button>
+  <button class="tab" onclick="go('sc-prof-adapt-hist')">Histórico</button>
+</div>
+<div class="scrl"><div class="cnt">
+  <div class="alr an"><i class="ti ti-sparkles ico"></i><div class="at"><div class="atit">Como funciona</div>Você insere a atividade da sua aula normalmente. A IA lê o perfil de acessibilidade de cada aluno e gera uma versão adaptada — no formato que cada criança processa melhor. Você revisa e aprova antes de enviar.</div></div>
+  <div class="sec-new"><i class="ti ti-users" style="font-size:13px"></i>Alunos com IA ativa</div>
+  <div class="card" style="gap:10px">
+    <div class="row"><div style="width:36px;height:36px;border-radius:50%;background:#EDE9FE;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">🧒</div><div class="col"><div class="vsm">Lucas</div><div class="mut">Passo a passo · Áudio · Exemplo concreto</div></div><span class="chip cnew">Ativo</span></div>
+    <div class="dv"></div>
+    <div class="row"><div style="width:36px;height:36px;border-radius:50%;background:#FCE7F3;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">👧</div><div class="col"><div class="vsm">Sofia</div><div class="mut">Texto curto · Checklist · Negrito</div></div><span class="chip cnew">Ativo</span></div>
+    <div class="dv"></div>
+    <div class="row"><div style="width:36px;height:36px;border-radius:50%;background:#D1FAE5;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">👦</div><div class="col"><div class="vsm">Pedro</div><div class="mut">Espaçamento extra · Áudio · Vocabulário simples</div></div><span class="chip cnew">Ativo</span></div>
+  </div>
+  <div class="hist-item" onclick="go('sc-prof-adapt-result')"><div class="row"><div class="col"><div class="vsm">Frações — Dividindo a Pizza</div><div class="mut">Matemática · Hoje · 3 versões geradas</div></div><span class="chip cs">Enviada</span></div></div>
+  <button class="btn bnew" onclick="go('sc-prof-adapt-nova')"><i class="ti ti-file-plus"></i>Nova atividade adaptada</button>
+</div></div>
+</div>
+
+<!-- PROF: ADAPT NOVA -->
+<div class="scr" id="sc-prof-adapt-nova">
+<div class="tbar"><button class="bk" onclick="go('sc-prof-adapt-home')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Nova atividade</span><span class="bdg-new">1/3</span></div>
+<div class="scrl"><div class="cnt">
+  <div class="steps"><div class="sdot on"></div><div class="sdot"></div><div class="sdot"></div></div>
+  <div class="card" style="gap:12px">
+    <div><div class="lbl" style="margin-bottom:6px">Disciplina</div><select><option>Matemática</option><option>Português</option><option>Ciências</option><option>História</option></select></div>
+    <div><div class="lbl" style="margin-bottom:6px">Título</div><input type="text" value="Frações — Dividindo a Pizza"></div>
+    <div><div class="lbl" style="margin-bottom:6px">Adaptar para</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+        <label style="display:flex;align-items:center;gap:10px;font-size:14px;color:var(--txs);cursor:pointer"><input type="checkbox" checked style="width:18px;height:18px;accent-color:var(--ac)"> Lucas (TEA grau 1)</label>
+        <label style="display:flex;align-items:center;gap:10px;font-size:14px;color:var(--txs);cursor:pointer"><input type="checkbox" checked style="width:18px;height:18px;accent-color:var(--ac)"> Sofia (TDAH)</label>
+        <label style="display:flex;align-items:center;gap:10px;font-size:14px;color:var(--txs);cursor:pointer"><input type="checkbox" checked style="width:18px;height:18px;accent-color:var(--ac)"> Pedro (Dislexia)</label>
+      </div>
+    </div>
+  </div>
+  <textarea rows="7">Uma fração representa uma parte de um todo. O numerador indica quantas partes foram tomadas, e o denominador indica em quantas partes iguais o todo foi dividido.
+
+Exercício: Uma pizza foi cortada em 8 partes iguais. João comeu 3 partes. Escreva a fração que representa a parte que João comeu.</textarea>
+  <button class="btn bnew" onclick="go('sc-prof-adapt-confirm')"><i class="ti ti-arrow-right"></i>Próximo — revisar</button>
+</div></div>
+</div>
+
+<!-- PROF: ADAPT CONFIRM -->
+<div class="scr" id="sc-prof-adapt-confirm">
+<div class="tbar"><button class="bk" onclick="go('sc-prof-adapt-nova')"><i class="ti ti-arrow-left"></i></button><span class="tbt">O que a IA vai fazer</span><span class="bdg-new">2/3</span></div>
+<div class="scrl"><div class="cnt">
+  <div class="steps"><div class="sdot on"></div><div class="sdot on"></div><div class="sdot"></div></div>
+  <div class="card" style="gap:10px">
+    <div class="row"><div style="width:36px;height:36px;border-radius:50%;background:#EDE9FE;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">🧒</div><div class="col"><div class="vsm">Lucas · TEA grau 1</div></div></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap"><span class="chip cnew">📋 Passo a passo</span><span class="chip cnew">🎧 Áudio</span><span class="chip cnew">🍕 Exemplo cotidiano</span><span class="chip cnew">🔤 Fonte ampliada</span></div>
+  </div>
+  <div class="card" style="gap:10px">
+    <div class="row"><div style="width:36px;height:36px;border-radius:50%;background:#FCE7F3;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">👧</div><div class="col"><div class="vsm">Sofia · TDAH</div></div></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap"><span class="chip cp">⚡ Texto curto</span><span class="chip cp">☑ Checklist</span><span class="chip cp">👁 Palavras em negrito</span></div>
+  </div>
+  <div class="card" style="gap:10px">
+    <div class="row"><div style="width:36px;height:36px;border-radius:50%;background:#D1FAE5;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">👦</div><div class="col"><div class="vsm">Pedro · Dislexia</div></div></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap"><span class="chip cs">↕ Espaçamento extra</span><span class="chip cs">🎧 Áudio</span><span class="chip cs">📖 Vocabulário simples</span></div>
+  </div>
+  <div class="alr aw"><i class="ti ti-shield ico"></i><div class="at"><strong>O conteúdo pedagógico não muda.</strong> Apenas o formato e a linguagem são adaptados. Você revisa cada versão antes de enviar.</div></div>
+  <button class="btn bnew" onclick="adaptarIA()"><i class="ti ti-sparkles"></i>Gerar adaptações com IA</button>
+  <button class="btn" onclick="go('sc-prof-adapt-nova')"><i class="ti ti-arrow-left"></i>Voltar</button>
+</div></div>
+</div>
+
+<!-- PROF: ADAPT RESULT -->
+<div class="scr" id="sc-prof-adapt-result">
+<div class="tbar"><button class="bk" onclick="go('sc-prof-adapt-home')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Versões geradas</span><span class="bdg-new">3/3</span></div>
+<div class="tabs">
+  <button class="tab on" id="tab-rl" onclick="showAdap('lucas')">🧒 Lucas</button>
+  <button class="tab" id="tab-rs" onclick="showAdap('sofia')">👧 Sofia</button>
+  <button class="tab" id="tab-rp" onclick="showAdap('pedro')">👦 Pedro</button>
+</div>
+<div class="scrl" id="adap-body"></div>
+</div>
+
+<!-- PROF: ADAPT HIST -->
+<div class="scr" id="sc-prof-adapt-hist">
+<div class="tbar"><button class="bk" onclick="go('sc-prof-adapt-home')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Histórico de adaptações</span></div>
+<div class="scrl"><div class="cnt">
+  <div class="g2">
+    <div class="card-sm"><div class="lbl">Este mês</div><div class="vsm" style="color:var(--new);margin-top:3px">12</div><div class="mut">atividades adaptadas</div></div>
+    <div class="card-sm"><div class="lbl">Versões geradas</div><div class="vsm" style="color:var(--new);margin-top:3px">36</div><div class="mut">3 por atividade</div></div>
+  </div>
+  <div class="hist-item" onclick="go('sc-prof-adapt-result')"><div class="row"><div class="col"><div class="vsm">Frações — Dividindo a Pizza</div><div class="mut">Matemática · Hoje</div></div><span class="chip cs">Enviada</span></div></div>
+  <div class="hist-item"><div class="row"><div class="col"><div class="vsm">Interpretação — O Rio</div><div class="mut">Português · Ontem</div></div><span class="chip cs">Enviada</span></div></div>
+  <div class="hist-item"><div class="row"><div class="col"><div class="vsm">O ciclo da água</div><div class="mut">Ciências · 3 dias atrás</div></div><span class="chip cs">Enviada</span></div></div>
+</div></div>
+</div>
+
+<!-- ============================================================ -->
+<!--                    PERFIL: PAIS                             -->
+<!-- ============================================================ -->
+<div class="scr" id="sc-parent-home">
+<div class="tbar"><button class="bk" onclick="go('sc-splash')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Ana · Lucas</span>
+  <div style="position:relative;cursor:pointer" onclick="go('sc-parent-notif')"><i class="ti ti-bell" style="font-size:22px;color:var(--txs)"></i><div style="position:absolute;top:-2px;right:-2px;width:8px;height:8px;border-radius:50%;background:var(--rd)"></div></div>
+</div>
+<div class="tabs">
+  <button class="tab on" onclick="go('sc-parent-home')">Início</button>
+  <button class="tab tab-new" onclick="go('sc-parent-ativs')">✦ Atividades</button>
+  <button class="tab" onclick="go('sc-parent-kit')">Kit de apoio</button>
+  <button class="tab" onclick="go('sc-parent-msgs')">Mensagens</button>
+  <button class="tab" onclick="go('sc-parent-mais')">Mais</button>
+</div>
+<div class="scrl"><div class="cnt">
+  <div class="g2">
+    <div class="card-sm"><div class="lbl">Humor hoje</div><div class="vsm" style="margin-top:3px">😊 Bem</div><div class="mut">registrado às 8h30</div></div>
+    <div class="card-sm"><div class="lbl">Alertas hoje</div><div class="vsm" style="color:var(--wn);margin-top:3px">1 alerta</div><div class="mut">BPM elevado · 9h08</div></div>
+    <div class="card-sm"><div class="lbl">Pausas</div><div class="vsm" style="margin-top:3px">1 hoje</div><div class="mut">atendida pela prof.</div></div>
+    <div class="card-sm"><div class="lbl">Notas</div><div class="vsm" style="color:var(--ok);margin-top:3px">Média 7,3</div><div class="mut">este bimestre</div></div>
+  </div>
+  <div class="alr aw" style="cursor:pointer" onclick="go('sc-parent-alertas')">
+    <i class="ti ti-activity ico"></i>
+    <div class="at"><div class="atit">Alerta da pulseira — 9h08</div>BPM 145 registrado. A professora foi notificada automaticamente.<div class="afoot">Toque para ver o histórico de alertas</div></div>
+  </div>
+  <div class="sec-new"><i class="ti ti-sparkles" style="font-size:13px"></i>Atividade adaptada de hoje <span class="new-badge">NOVO</span></div>
+  <div class="card-new" style="cursor:pointer" onclick="go('sc-parent-ativs')">
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+      <div class="row"><div style="width:38px;height:38px;border-radius:8px;background:var(--acl);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">➗</div><div class="col"><div class="vsm">Frações — Dividindo a Pizza</div><div class="mut" style="color:var(--newb)">Adaptada para o Lucas · Passo a passo + Áudio</div></div><span class="chip cw">Pendente</span></div>
+    </div>
+    <div class="at" style="font-size:12px;color:var(--newb);margin-top:10px">O texto original da professora foi convertido em 4 passos simples com exemplos de pizza e botão de áudio em cada passo.</div>
+  </div>
+  <div class="sec">Humor e sentimentos</div>
+  <div class="card" style="gap:8px">
+    <div class="row"><span class="lbl" style="flex:1">Hoje às 8h30</span><span class="vsm">😊 Bem</span></div>
+    <div class="dv"></div>
+    <div class="row"><span class="lbl" style="flex:1">Ontem às 14h10</span><span class="vsm">😤 Agitado</span></div>
+    <div class="dv"></div>
+    <div class="row"><span class="lbl" style="flex:1">22/07 às 9h00</span><span class="vsm">😊 Bem</span></div>
+  </div>
+  <button class="btn bacc" onclick="go('sc-parent-msgs')"><i class="ti ti-message"></i>Mensagem para a professora</button>
+</div></div>
+<div class="nav">
+  <button class="nb on" onclick="go('sc-parent-home')"><i class="ti ti-home"></i>Início</button>
+  <button class="nb" onclick="go('sc-parent-ativs')" style="color:var(--new)"><i class="ti ti-sparkles"></i>Atividades</button>
+  <button class="nb" onclick="go('sc-parent-kit')"><i class="ti ti-heart"></i>Kit apoio</button>
+  <button class="nb" onclick="go('sc-parent-msgs')"><i class="ti ti-message"></i>Mensagens</button>
+  <button class="nb" onclick="go('sc-parent-mais')"><i class="ti ti-dots"></i>Mais</button>
+</div>
+</div>
+
+<!-- PAI: ATIVIDADES ADAPTADAS -->
+<div class="scr" id="sc-parent-ativs">
+<div class="tbar"><button class="bk" onclick="go('sc-parent-home')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Atividades do Lucas</span><span class="bdg-new">✦ NOVO</span></div>
+<div class="scrl"><div class="cnt">
+  <div class="g2">
+    <div class="card-sm"><div class="lbl">Este mês</div><div class="vsm" style="color:var(--new);margin-top:3px">8</div><div class="mut">atividades recebidas</div></div>
+    <div class="card-sm"><div class="lbl">Concluídas</div><div class="vsm" style="color:var(--ok);margin-top:3px">6 de 8</div><div class="mut">75% de conclusão</div></div>
+  </div>
+  <div class="sec">Hoje</div>
+  <div class="hist-item" onclick="go('sc-parent-ativ-detalhe')">
+    <div class="row" style="margin-bottom:8px"><div style="width:38px;height:38px;border-radius:8px;background:var(--acl);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">➗</div><div class="col"><div class="vsm">Frações — Dividindo a Pizza</div><div class="mut">Matemática · Profa. Renata</div></div><span class="chip cw">Pendente</span></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap"><span class="chip cnew">Adaptada para Lucas</span><span class="chip cn">4 passos</span><span class="chip cn">Com áudio</span></div>
+  </div>
+  <div class="sec">Anteriores</div>
+  <div class="hist-item"><div class="row"><div class="col"><div class="vsm">Interpretação — O Rio</div><div class="mut">Português · Ontem</div></div><span class="chip cs">Concluída ✓</span></div></div>
+  <div class="hist-item"><div class="row"><div class="col"><div class="vsm">O ciclo da água</div><div class="mut">Ciências · 3 dias</div></div><span class="chip cs">Concluída ✓</span></div></div>
+  <div class="hist-item"><div class="row"><div class="col"><div class="vsm">Pontuação — vírgula</div><div class="mut">Português · 7 dias</div></div><span class="chip ca">Ficou preso no passo 2</span></div></div>
+  <div class="alr aw"><i class="ti ti-alert-triangle ico"></i><div class="at">Na atividade de pontuação, o Lucas pausou no passo 2 por mais de 5 min. A professora foi notificada.</div></div>
+</div></div>
+</div>
+
+<!-- PAI: DETALHE ATIVIDADE -->
+<div class="scr" id="sc-parent-ativ-detalhe">
+<div class="tbar"><button class="bk" onclick="go('sc-parent-ativs')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Frações · versão do Lucas</span></div>
+<div class="scrl"><div class="cnt">
+  <div class="orig-box"><div class="ob-l">Atividade original (turma regular)</div><p>Uma fração representa uma parte de um todo. O numerador indica quantas partes foram tomadas, e o denominador indica em quantas partes iguais o todo foi dividido. Escreva a fração que representa a parte que João comeu...</p></div>
+  <div style="text-align:center;color:var(--txm);font-size:13px">⬇ A IA adaptou para o Lucas assim ⬇</div>
+  <div class="adap-box"><div class="ob-l">Versão adaptada para o Lucas</div><p><strong>Passo 1:</strong> Imagine uma pizza cortada em 8 pedaços iguais.<br><br><strong>Passo 2:</strong> O João comeu 3 pedaços.<br><br><strong>Passo 3:</strong> A fração é: 3/8 — "3 de 8 pedaços".<br><br><strong>Passo 4:</strong> Agora escreva você! ✏️</p><div class="xai">✦ Baseado no perfil: textos longos → 4 passos · linguagem abstrata → exemplo concreto · áudio disponível em cada passo</div></div>
+  <div class="sec">Por que foi adaptado assim?</div>
+  <div class="card" style="gap:2px">
+    <div class="token-row"><span class="tk-lbl">Textos longos são difíceis</span><span class="tk-val tk-wn">→ 4 passos</span></div>
+    <div class="dv"></div>
+    <div class="token-row"><span class="tk-lbl">Precisa de exemplos concretos</span><span class="tk-val tk-ok">→ pizza</span></div>
+    <div class="dv"></div>
+    <div class="token-row"><span class="tk-lbl">Áudio ajuda na leitura</span><span class="tk-val tk-ok">→ botão em cada passo</span></div>
+  </div>
+</div></div>
+</div>
+
+<!-- PAI: KIT DE APOIO -->
+<div class="scr" id="sc-parent-kit">
+<div class="tbar"><button class="bk" onclick="go('sc-parent-home')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Kit de apoio · Lucas</span></div>
+<div class="scrl"><div class="cnt">
+  <div class="alr ai"><i class="ti ti-info-circle ico"></i><div class="at">O kit de apoio informa a professora sobre como ajudar o Lucas em momentos de crise e quais estratégias funcionam para ele.</div></div>
+  <div class="sec">Interesses</div>
+  <div class="card"><div style="display:flex;gap:8px;flex-wrap:wrap"><span class="chip ca">🦕 Dinossauros</span><span class="chip ca">🚂 Trens</span><span class="chip ca">🎵 Música</span><span class="chip ca">🧩 Quebra-cabeça</span></div></div>
+  <div class="sec">Sensibilidades</div>
+  <div class="card"><div style="display:flex;gap:8px;flex-wrap:wrap"><span class="chip cw">🔊 Ruídos altos</span><span class="chip cw">💡 Luzes fortes</span><span class="chip cw">👥 Multidão</span></div></div>
+  <div class="sec">Estratégias calmantes</div>
+  <div class="card" style="gap:8px">
+    <div class="row"><span class="chip cs">1ª opção</span><span style="font-size:14px;color:var(--txs)">Respiração profunda (4-4-8)</span></div>
+    <div class="dv"></div>
+    <div class="row"><span class="chip ca">2ª opção</span><span style="font-size:14px;color:var(--txs)">Ouvir música com fone</span></div>
+    <div class="dv"></div>
+    <div class="row"><span class="chip cn">3ª opção</span><span style="font-size:14px;color:var(--txs)">Sentar no cantinho tranquilo</span></div>
+  </div>
+  <div class="sec">Contatos de emergência</div>
+  <div class="card" style="gap:8px">
+    <div class="row"><span class="lbl" style="flex:1">Ana (mãe)</span><span class="vsm">(62) 9 9999-0001</span></div>
+    <div class="dv"></div>
+    <div class="row"><span class="lbl" style="flex:1">Carlos (pai)</span><span class="vsm">(62) 9 9999-0002</span></div>
+  </div>
+  <button class="btn bacc" onclick="toast('Kit de apoio salvo ✓')"><i class="ti ti-device-floppy"></i>Salvar alterações</button>
+</div></div>
+</div>
+
+<!-- PAI: ALERTAS -->
+<div class="scr" id="sc-parent-alertas">
+<div class="tbar"><button class="bk" onclick="go('sc-parent-home')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Alertas da pulseira</span></div>
+<div class="scrl"><div class="cnt">
+  <div class="alr aw"><i class="ti ti-activity ico"></i><div class="at"><div class="atit">Hoje · 9h08 — BPM 145</div>Frequência cardíaca elevada. Professora foi notificada. Lucas pediu pausa às 9h12 e se acalmou.</div></div>
+  <div class="sec">Histórico</div>
+  <div class="alert-item"><div class="row"><div class="col"><div class="vsm">Ontem · 14h22 — BPM 138</div><div class="mut">Resolvido com pausa · 12 min</div></div><span class="chip cs">Resolvido</span></div></div>
+  <div class="alert-item"><div class="row"><div class="col"><div class="vsm">22/07 · 10h05 — GSR alto</div><div class="mut">Resolvido com música</div></div><span class="chip cs">Resolvido</span></div></div>
+</div></div>
+</div>
+
+<!-- PAI: MENSAGENS -->
+<div class="scr" id="sc-parent-msgs">
+<div class="tbar"><button class="bk" onclick="go('sc-parent-home')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Mensagens</span></div>
+<div class="scrl"><div class="cnt">
+  <div class="msg-item unread" onclick="go('sc-parent-chat')">
+    <div class="row"><div style="width:38px;height:38px;border-radius:50%;background:#DBEAFE;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">👩‍🏫</div><div class="col"><div class="vsm">Profa. Renata</div><div class="mut" style="color:var(--act)">Sim! A atividade chegou em passo a passo...</div></div><span class="mut" style="font-size:11px;flex-shrink:0">9h16</span></div>
+  </div>
+</div></div>
+</div>
+
+<!-- PAI: CHAT -->
+<div class="scr" id="sc-parent-chat" style="flex-direction:column">
+<div class="tbar"><button class="bk" onclick="go('sc-parent-msgs')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Profa. Renata</span></div>
+<div class="chat-wrap">
+  <div class="chat-msgs">
+    <div class="bubble bme">Professora, o Lucas estava bem agitado ontem à tarde. Aconteceu algo na aula?</div>
+    <div class="bubble bth">Sim, registramos um alerta pela pulseira às 14h22. Ele pediu uma pausa e se acalmou com respiração. Em 15 minutos voltou bem.</div>
+    <div class="bubble bme">A atividade de hoje já foi adaptada?</div>
+    <div class="bubble bth">Sim! A atividade de frações chegou para ele em passo a passo com áudio. Ele pode fazer no ritmo dele 😊</div>
+  </div>
+  <div class="chat-in"><input type="text" placeholder="Escreva uma mensagem..." onkeydown="if(event.key==='Enter')sendMsg(this,'sc-parent-chat')"><button class="chat-snd" onclick="sendMsg(this.previousElementSibling,'sc-parent-chat')"><i class="ti ti-send"></i></button></div>
+</div>
+</div>
+
+<!-- PAI: MAIS -->
+<div class="scr" id="sc-parent-mais">
+<div class="tbar"><button class="bk" onclick="go('sc-parent-home')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Mais opções</span></div>
+<div class="scrl"><div class="cnt">
+  <div class="sec">Configurações do Lucas</div>
+  <div class="card" style="gap:0">
+    <div class="row" style="padding:12px 0;cursor:pointer" onclick="go('sc-parent-perfil-ac')"><i class="ti ti-adjustments" style="font-size:20px;color:var(--ac)"></i><div class="col" style="margin-left:4px"><div class="vsm">Perfil de acessibilidade <span class="new-badge">IA</span></div><div class="mut">Como a IA adapta as atividades</div></div><i class="ti ti-chevron-right" style="color:var(--txm)"></i></div>
+    <div class="dv"></div>
+    <div class="row" style="padding:12px 0;cursor:pointer" onclick="go('sc-parent-kit')"><i class="ti ti-heart" style="font-size:20px;color:var(--rd)"></i><div class="col" style="margin-left:4px"><div class="vsm">Kit de apoio</div><div class="mut">Interesses, sensibilidades e estratégias</div></div><i class="ti ti-chevron-right" style="color:var(--txm)"></i></div>
+    <div class="dv"></div>
+    <div class="row" style="padding:12px 0;cursor:pointer" onclick="go('sc-parent-consentimento')"><i class="ti ti-shield" style="font-size:20px;color:var(--pu)"></i><div class="col" style="margin-left:4px"><div class="vsm">Consentimento LGPD</div><div class="mut">Dados coletados e seus direitos</div></div><i class="ti ti-chevron-right" style="color:var(--txm)"></i></div>
+    <div class="dv"></div>
+    <div class="row" style="padding:12px 0;cursor:pointer" onclick="go('sc-parent-alertas')"><i class="ti ti-activity" style="font-size:20px;color:var(--wn)"></i><div class="col" style="margin-left:4px"><div class="vsm">Alertas da pulseira IoT</div><div class="mut">Histórico de sinais biométricos</div></div><i class="ti ti-chevron-right" style="color:var(--txm)"></i></div>
+    <div class="dv"></div>
+    <div class="row" style="padding:12px 0;cursor:pointer" onclick="go('sc-parent-forum')"><i class="ti ti-messages" style="font-size:20px;color:var(--new)"></i><div class="col" style="margin-left:4px"><div class="vsm">Fórum da turma</div><div class="mut">Tópicos e discussões</div></div><i class="ti ti-chevron-right" style="color:var(--txm)"></i></div>
+    <div class="dv"></div>
+    <div class="row" style="padding:12px 0;cursor:pointer" onclick="go('sc-parent-agenda')"><i class="ti ti-calendar" style="font-size:20px;color:var(--ac)"></i><div class="col" style="margin-left:4px"><div class="vsm">Agenda escolar</div><div class="mut">Eventos e provas</div></div><i class="ti ti-chevron-right" style="color:var(--txm)"></i></div>
+  </div>
+</div></div>
+</div>
+
+<!-- PAI: PERFIL ACESSIBILIDADE -->
+<div class="scr" id="sc-parent-perfil-ac">
+<div class="tbar"><button class="bk" onclick="go('sc-parent-mais')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Perfil do Lucas</span><span class="bdg-new">✦ IA</span></div>
+<div class="scrl"><div class="cnt">
+  <div class="alr an"><i class="ti ti-sparkles ico"></i><div class="at">Estas configurações definem como a IA adapta as atividades para o Lucas. Qualquer alteração vale para a próxima atividade enviada.</div></div>
+  <div class="sec">Sensorial</div>
+  <div class="card" style="gap:2px">
+    <div class="token-row"><span class="tk-lbl">Se incomoda com sons altos?</span><span class="tk-val tk-wn">Sim</span></div>
+    <div class="dv"></div>
+    <div class="token-row"><span class="tk-lbl">Perde interesse com tela parada?</span><span class="tk-val tk-ac">Às vezes</span></div>
+  </div>
+  <div class="sec">Linguagem</div>
+  <div class="card" style="gap:2px">
+    <div class="token-row"><span class="tk-lbl">Lê sozinho com facilidade?</span><span class="tk-val tk-ac">Com esforço</span></div>
+    <div class="dv"></div>
+    <div class="token-row"><span class="tk-lbl">Se cansa com textos longos?</span><span class="tk-val tk-wn">Sim</span></div>
+    <div class="dv"></div>
+    <div class="token-row"><span class="tk-lbl">Áudio ajuda?</span><span class="tk-val tk-ok">Sim</span></div>
+  </div>
+  <div class="sec">Cognitivo</div>
+  <div class="card" style="gap:2px">
+    <div class="token-row"><span class="tk-lbl">Processa 1 instrução por vez?</span><span class="tk-val tk-wn">Sim</span></div>
+    <div class="dv"></div>
+    <div class="token-row"><span class="tk-lbl">Entende melhor com exemplos do dia a dia?</span><span class="tk-val tk-ok">Sim</span></div>
+    <div class="dv"></div>
+    <div class="token-row"><span class="tk-lbl">Linguagem figurada confunde?</span><span class="tk-val tk-wn">Sim — evitar</span></div>
+  </div>
+  <button class="btn bnew" onclick="toast('Perfil salvo — próximas atividades já usarão as novas preferências ✓')"><i class="ti ti-device-floppy"></i>Salvar preferências</button>
+</div></div>
+</div>
+
+<!-- PAI: CONSENTIMENTO -->
+<div class="scr" id="sc-parent-consentimento">
+<div class="tbar"><button class="bk" onclick="go('sc-parent-mais')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Consentimento LGPD</span></div>
+<div class="scrl"><div class="cnt">
+  <div class="alr ap"><i class="ti ti-shield ico"></i><div class="at"><div class="atit">Dados coletados sobre o Lucas</div>Frequência cardíaca (BPM) · Condutância da pele (GSR) · Movimento · Humor registrado · Interações com atividades</div></div>
+  <div class="sec">Status do consentimento</div>
+  <div class="card" style="gap:8px">
+    <div class="row"><span class="lbl" style="flex:1">Coleta biométrica (pulseira)</span><span class="chip cs">Ativo</span></div>
+    <div class="dv"></div>
+    <div class="row"><span class="lbl" style="flex:1">Análise de interações no app</span><span class="chip cs">Ativo</span></div>
+    <div class="dv"></div>
+    <div class="row"><span class="lbl" style="flex:1">Compartilhamento com professora</span><span class="chip cs">Ativo</span></div>
+  </div>
+  <button class="btn" style="border-color:var(--rd);color:var(--rd)" onclick="toast('Solicitação de revogação enviada — efeito imediato ✓')"><i class="ti ti-x"></i>Revogar consentimento</button>
+  <div class="alr ai"><i class="ti ti-info-circle ico"></i><div class="at">A revogação tem efeito imediato. Os dados existentes serão anonimizados em até 72h conforme a LGPD.</div></div>
+</div></div>
+</div>
+
+<!-- PAI: FÓRUM -->
+<div class="scr" id="sc-parent-forum">
+<div class="tbar"><button class="bk" onclick="go('sc-parent-mais')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Fórum da turma</span></div>
+<div class="scrl"><div class="cnt">
+  <button class="btn bacc" onclick="toast('Novo tópico criado ✓')"><i class="ti ti-plus"></i>Criar tópico</button>
+  <div class="hist-item"><div class="row"><div class="col"><div class="vsm">Atividade da semana — dúvidas?</div><div class="mut">Profa. Renata · 3 respostas</div></div><span class="chip cs">3 novo</span></div></div>
+  <div class="hist-item"><div class="row"><div class="col"><div class="vsm">Dica de leitura para o verão</div><div class="mut">Ana (você) · 5 respostas</div></div><span class="chip cn">5 resp.</span></div></div>
+</div></div>
+</div>
+
+<!-- PAI: AGENDA -->
+<div class="scr" id="sc-parent-agenda">
+<div class="tbar"><button class="bk" onclick="go('sc-parent-mais')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Agenda escolar</span></div>
+<div class="scrl"><div class="cnt">
+  <div class="hist-item"><div class="row"><div style="width:40px;height:40px;border-radius:8px;background:var(--acl);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">📝</div><div class="col"><div class="vsm">Prova de Ciências</div><div class="mut">28/07/2026 · 8h00</div></div></div></div>
+  <div class="hist-item"><div class="row"><div style="width:40px;height:40px;border-radius:8px;background:var(--pul);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🎨</div><div class="col"><div class="vsm">Feira de Ciências</div><div class="mut">05/08/2026 · 9h00</div></div></div></div>
+  <div class="hist-item"><div class="row"><div style="width:40px;height:40px;border-radius:8px;background:var(--okl);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">👪</div><div class="col"><div class="vsm">Reunião de pais</div><div class="mut">10/08/2026 · 19h00</div></div></div></div>
+</div></div>
+</div>
+
+<!-- PAI: NOTIFICAÇÕES -->
+<div class="scr" id="sc-parent-notif">
+<div class="tbar"><button class="bk" onclick="go('sc-parent-home')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Notificações</span></div>
+<div class="scrl"><div class="cnt">
+  <div class="notif-item unr"><div class="notif-dot"></div><div class="col"><div class="vsm">Alerta de crise — pulseira · 9h08</div><div class="mut">BPM 145 registrado pela pulseira</div></div></div>
+  <div class="notif-item unr"><div class="notif-dot"></div><div class="col"><div class="vsm">Atividade adaptada disponível</div><div class="mut" style="color:var(--newb)">Frações — Dividindo a Pizza · Novo</div></div></div>
+  <div class="notif-item"><div style="width:8px;height:8px;flex-shrink:0;margin-top:5px"></div><div class="col"><div class="vsm">Profa. Renata respondeu</div><div class="mut">Mensagens · Ontem</div></div></div>
+  <div class="notif-item"><div style="width:8px;height:8px;flex-shrink:0;margin-top:5px"></div><div class="col"><div class="vsm">Prova de Ciências em 3 dias</div><div class="mut">Agenda · 28/07</div></div></div>
+</div></div>
+</div>
+
+<!-- ============================================================ -->
+<!--                    PERFIL: ALUNO                            -->
+<!-- ============================================================ -->
+<div class="scr" id="sc-student-home">
+<div class="tbar"><button class="bk" onclick="go('sc-splash')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Olá, Lucas! 👋</span>
+  <div style="position:relative;cursor:pointer" onclick="go('sc-student-notif')"><i class="ti ti-bell" style="font-size:22px;color:var(--txs)"></i><div style="position:absolute;top:-2px;right:-2px;width:8px;height:8px;border-radius:50%;background:var(--rd)"></div></div>
+</div>
+<div class="tabs">
+  <button class="tab on" onclick="go('sc-student-home')">Início</button>
+  <button class="tab tab-new" onclick="go('sc-student-ativs')">✦ Atividades</button>
+  <button class="tab" onclick="go('sc-student-desafios')">Desafios</button>
+  <button class="tab" onclick="go('sc-student-mais')">Mais</button>
+</div>
+<div class="scrl"><div class="cnt">
+  <!-- humor -->
+  <div class="sec">Como você está agora?</div>
+  <div style="display:flex;gap:8px">
+    <button onclick="setMood('😊','Bem')" style="flex:1;flex-direction:column;padding:12px 4px;border-radius:12px;font-size:22px;gap:3px;border:.5px solid var(--bd);background:var(--sf);cursor:pointer;font-family:var(--fn);display:flex;align-items:center">😊<span style="font-size:10px;color:var(--txs);font-weight:500">Bem</span></button>
+    <button onclick="setMood('😐','Mais ou menos')" style="flex:1;flex-direction:column;padding:12px 4px;border-radius:12px;font-size:22px;gap:3px;border:.5px solid var(--bd);background:var(--sf);cursor:pointer;font-family:var(--fn);display:flex;align-items:center">😐<span style="font-size:10px;color:var(--txs);font-weight:500">Mais ou menos</span></button>
+    <button onclick="setMood('😢','Difícil')" style="flex:1;flex-direction:column;padding:12px 4px;border-radius:12px;font-size:22px;gap:3px;border:.5px solid var(--bd);background:var(--sf);cursor:pointer;font-family:var(--fn);display:flex;align-items:center">😢<span style="font-size:10px;color:var(--txs);font-weight:500">Difícil</span></button>
+    <button onclick="setMood('😤','Bravo')" style="flex:1;flex-direction:column;padding:12px 4px;border-radius:12px;font-size:22px;gap:3px;border:.5px solid var(--bd);background:var(--sf);cursor:pointer;font-family:var(--fn);display:flex;align-items:center">😤<span style="font-size:10px;color:var(--txs);font-weight:500">Bravo</span></button>
+  </div>
+  <div id="mood-msg" style="display:none" class="alr as"><i class="ti ti-heart ico"></i><div class="at"><span id="mood-txt"></span></div></div>
+  <!-- pausa -->
+  <button class="btn" style="border-color:var(--wn);color:var(--wn)" onclick="go('sc-student-pausa')"><i class="ti ti-hand-stop"></i>Preciso de uma pausa</button>
+  <!-- atividade nova -->
+  <div class="sec-new"><i class="ti ti-sparkles" style="font-size:13px"></i>Atividade de hoje <span class="new-badge">NOVA</span></div>
+  <div onclick="go('sc-student-ativ')" style="cursor:pointer;border:2px solid var(--new);border-radius:14px;padding:16px;background:var(--sf)">
+    <div class="row" style="margin-bottom:10px">
+      <div style="font-size:36px">➗</div>
+      <div class="col"><div style="font-size:15px;font-weight:700;color:var(--act)">Frações — Dividindo a Pizza</div><div style="font-size:12px;color:var(--new)">Matemática · Profa. Renata · 4 passos</div></div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"><span class="chip cnew">🎧 Com áudio</span><span class="chip cnew">📋 4 passos</span></div>
+    <div class="bw"><div class="bf" style="width:0%;background:var(--ac)"></div></div>
+    <div class="mut" style="font-size:11px;margin-top:4px">0 de 4 passos · Toque para começar →</div>
+  </div>
+  <!-- metas -->
+  <div class="sec">Minhas metas</div>
+  <div class="card" style="gap:8px">
+    <div class="goal-item"><div class="goal-cb done" onclick="this.classList.toggle('done')"><i class="ti ti-check" style="font-size:12px;color:#fff"></i></div><div class="col"><div style="font-size:14px;color:var(--tx)">Ler 15 minutos hoje</div><div class="mut">Meta da Profa. Renata</div></div></div>
+    <div class="dv"></div>
+    <div class="goal-item"><div class="goal-cb" onclick="this.classList.toggle('done')"></div><div class="col"><div style="font-size:14px;color:var(--tx)">Fazer a atividade de frações</div><div class="mut">Meta da Profa. Renata</div></div></div>
+  </div>
+</div></div>
+<div class="nav">
+  <button class="nb on" onclick="go('sc-student-home')"><i class="ti ti-home"></i>Início</button>
+  <button class="nb" onclick="go('sc-student-ativs')" style="color:var(--new)"><i class="ti ti-sparkles"></i>Atividades</button>
+  <button class="nb" onclick="go('sc-student-desafios')"><i class="ti ti-trophy"></i>Desafios</button>
+  <button class="nb" onclick="go('sc-student-mais')"><i class="ti ti-dots"></i>Mais</button>
+</div>
+</div>
+
+<!-- ALUNO: PAUSA -->
+<div class="scr" id="sc-student-pausa">
+<div class="tbar"><button class="bk" onclick="go('sc-student-home')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Pedir uma pausa</span></div>
+<div class="scrl"><div class="cnt">
+  <div class="alr ai"><i class="ti ti-heart ico"></i><div class="at">Tudo bem pedir uma pausa. Escolha o que te ajuda e eu aviso a professora.</div></div>
+  <div class="sec">O que te ajuda?</div>
+  <div class="break-opt" id="bp1" onclick="selBreak('bp1')"><div style="font-size:28px">🌬️</div><div class="col"><div class="vsm">Respiração profunda</div><div class="mut">Funcionou 3 vezes ✓</div></div></div>
+  <div class="break-opt" id="bp2" onclick="selBreak('bp2')" style="margin-top:8px"><div style="font-size:28px">🎵</div><div class="col"><div class="vsm">Ouvir música com fone</div><div class="mut">Funcionou 2 vezes ✓</div></div></div>
+  <div class="break-opt" id="bp3" onclick="selBreak('bp3')" style="margin-top:8px"><div style="font-size:28px">🪑</div><div class="col"><div class="vsm">Sentar no cantinho tranquilo</div><div class="mut">1 vez</div></div></div>
+  <button class="btn bacc" style="margin-top:4px" onclick="solicitarPausa()"><i class="ti ti-send"></i>Avisar a professora</button>
+  <button class="btn" onclick="solicitarPausa()"><i class="ti ti-bell-off"></i>Avisar sem escolher</button>
+</div></div>
+</div>
+
+<!-- ALUNO: ATIVIDADES LISTA -->
+<div class="scr" id="sc-student-ativs">
+<div class="tbar"><button class="bk" onclick="go('sc-student-home')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Minhas atividades</span><span class="bdg-new">✦ NOVO</span></div>
+<div class="scrl"><div class="cnt">
+  <div class="sec-new"><i class="ti ti-sparkles" style="font-size:13px"></i>Hoje</div>
+  <div class="hist-item" onclick="go('sc-student-ativ')">
+    <div class="row" style="margin-bottom:6px"><div style="width:38px;height:38px;border-radius:8px;background:var(--acl);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">➗</div><div class="col"><div class="vsm">Frações — Dividindo a Pizza</div><div class="mut">Matemática · 4 passos · Com áudio</div></div><span class="chip cw">Pendente</span></div>
+  </div>
+  <div class="sec">Anteriores</div>
+  <div class="hist-item"><div class="row"><div class="col"><div class="vsm">Interpretação — O Rio</div><div class="mut">Português · Ontem</div></div><span class="chip cs">✓ Feita</span></div></div>
+  <div class="hist-item"><div class="row"><div class="col"><div class="vsm">O ciclo da água</div><div class="mut">Ciências · 3 dias</div></div><span class="chip cs">✓ Feita</span></div></div>
+</div></div>
+</div>
+
+<!-- ALUNO: FAZENDO A ATIVIDADE -->
+<div class="scr" id="sc-student-ativ">
+<div class="tbar"><button class="bk" onclick="go('sc-student-ativs')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Frações · 4 passos</span><span class="bdg" id="passo-badge">Passo 1 de 4</span></div>
+<div class="scrl"><div class="cnt" id="passo-body"></div></div>
+</div>
+
+<!-- ALUNO: DESAFIOS -->
+<div class="scr" id="sc-student-desafios">
+<div class="tbar"><button class="bk" onclick="go('sc-student-home')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Desafios</span></div>
+<div class="scrl"><div class="cnt">
+  <div class="hist-item">
+    <div class="row" style="margin-bottom:8px"><div style="font-size:28px">📚</div><div class="col"><div class="vsm">Ler 15 minutos por dia</div><div class="mut">Profa. Renata · Ativo até 31/07</div></div></div>
+    <div class="bw"><div class="bf" style="width:60%;background:var(--ac)"></div></div>
+    <div class="mut" style="margin-top:4px;font-size:12px">3 de 5 dias concluídos</div>
+    <button class="btn bacc" style="margin-top:10px" onclick="toast('Desafio concluído para hoje! ⭐ +5 pontos')"><i class="ti ti-check"></i>Concluí hoje!</button>
+  </div>
+</div></div>
+</div>
+
+<!-- ALUNO: GALERIA -->
+<div class="scr" id="sc-student-galeria">
+<div class="tbar"><button class="bk" onclick="go('sc-student-mais')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Minha galeria</span></div>
+<div class="scrl"><div class="cnt">
+  <button class="btn bacc" onclick="toast('Criação enviada para aprovação da professora ✓')"><i class="ti ti-plus"></i>Enviar nova criação</button>
+  <div class="sec">Minhas criações aprovadas</div>
+  <div class="g3">
+    <div style="aspect-ratio:1;border-radius:10px;background:linear-gradient(135deg,#DBEAFE,#EDE9FE);display:flex;align-items:center;justify-content:center;font-size:28px;cursor:pointer">🎨</div>
+    <div style="aspect-ratio:1;border-radius:10px;background:linear-gradient(135deg,#D1FAE5,#FEF9C3);display:flex;align-items:center;justify-content:center;font-size:28px;cursor:pointer">✏️</div>
+    <div style="aspect-ratio:1;border-radius:10px;background:linear-gradient(135deg,var(--pul),var(--acl));display:flex;align-items:center;justify-content:center;font-size:28px;cursor:pointer">🖍️</div>
+  </div>
+  <div class="sec">Aguardando aprovação</div>
+  <div class="card-sm"><div class="mut">1 criação aguardando aprovação da professora</div></div>
+</div></div>
+</div>
+
+<!-- ALUNO: QA -->
+<div class="scr" id="sc-student-qa">
+<div class="tbar"><button class="bk" onclick="go('sc-student-mais')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Perguntas para a professora</span></div>
+<div class="scrl"><div class="cnt">
+  <button class="btn bacc" onclick="toast('Pergunta enviada para a Profa. Renata ✓')"><i class="ti ti-plus"></i>Fazer uma pergunta</button>
+  <div class="hist-item">
+    <div class="row" style="margin-bottom:6px"><div class="col"><div class="vsm">Não entendi o que é numerador</div><div class="mut">Enviada hoje · 8h45</div></div><span class="chip cs">Respondida</span></div>
+    <div class="alr as" style="padding:8px 10px"><i class="ti ti-check ico" style="font-size:14px"></i><div class="at" style="font-size:12px">Numerador é o número de cima — os pedaços que você comeu! 🍕</div></div>
+  </div>
+  <div class="hist-item"><div class="row"><div class="col"><div class="vsm">Quando é a próxima prova?</div><div class="mut">Ontem · Respondida</div></div><span class="chip cs">Respondida</span></div></div>
+</div></div>
+</div>
+
+<!-- ALUNO: AGENDA -->
+<div class="scr" id="sc-student-agenda">
+<div class="tbar"><button class="bk" onclick="go('sc-student-mais')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Minha agenda</span></div>
+<div class="scrl"><div class="cnt">
+  <div class="hist-item"><div class="row"><div style="width:40px;height:40px;border-radius:8px;background:var(--acl);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">📝</div><div class="col"><div class="vsm">Prova de Ciências</div><div class="mut">28/07/2026 · 8h00</div></div></div></div>
+  <div class="hist-item"><div class="row"><div style="width:40px;height:40px;border-radius:8px;background:var(--pul);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🎨</div><div class="col"><div class="vsm">Feira de Ciências</div><div class="mut">05/08/2026 · 9h00</div></div></div></div>
+</div></div>
+</div>
+
+<!-- ALUNO: CONFORTO (ajustes próprios da criança) -->
+<div class="scr" id="sc-student-conforto">
+<div class="tbar"><button class="bk" onclick="go('sc-student-mais')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Meu conforto</span></div>
+<div class="scrl"><div class="cnt">
+  <div class="alr ai"><i class="ti ti-heart ico"></i><div class="at">Você pode ajustar como quer ver as coisas no app. Seus pais configuram as partes mais importantes, mas algumas você pode mudar sozinho.</div></div>
+  <div class="sec">Tamanho do texto</div>
+  <div style="display:flex;gap:8px">
+    <button class="btn bsec" onclick="toast('Texto médio ✓')" style="flex:1">A</button>
+    <button class="btn bacc" style="flex:1;font-size:18px">A</button>
+    <button class="btn" onclick="toast('Texto grande ✓')" style="flex:1;font-size:22px">A</button>
+  </div>
+  <div class="sec">Fundo da tela</div>
+  <div style="display:flex;gap:8px">
+    <button class="btn bacc" style="flex:1" onclick="toast('Fundo claro ✓')">☀️ Claro</button>
+    <button class="btn" style="flex:1;background:#1A1814;color:#fff;border-color:#1A1814" onclick="toast('Fundo escuro ✓')">🌙 Escuro</button>
+  </div>
+  <button class="btn bnew" onclick="toast('Preferências salvas ✓')"><i class="ti ti-device-floppy"></i>Salvar preferências</button>
+</div></div>
+</div>
+
+<!-- ALUNO: MAIS -->
+<div class="scr" id="sc-student-mais">
+<div class="tbar"><button class="bk" onclick="go('sc-student-home')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Mais opções</span></div>
+<div class="scrl"><div class="cnt">
+  <div class="card" style="gap:0">
+    <div class="row" style="padding:12px 0;cursor:pointer" onclick="go('sc-student-galeria')"><i class="ti ti-photo" style="font-size:20px;color:var(--am)"></i><div class="col" style="margin-left:4px"><div class="vsm">Minha galeria</div><div class="mut">Minhas criações e trabalhos</div></div><i class="ti ti-chevron-right" style="color:var(--txm)"></i></div>
+    <div class="dv"></div>
+    <div class="row" style="padding:12px 0;cursor:pointer" onclick="go('sc-student-qa')"><i class="ti ti-help" style="font-size:20px;color:var(--new)"></i><div class="col" style="margin-left:4px"><div class="vsm">Perguntar para a professora</div><div class="mut">Dúvidas sobre as atividades</div></div><i class="ti ti-chevron-right" style="color:var(--txm)"></i></div>
+    <div class="dv"></div>
+    <div class="row" style="padding:12px 0;cursor:pointer" onclick="go('sc-student-agenda')"><i class="ti ti-calendar" style="font-size:20px;color:var(--ac)"></i><div class="col" style="margin-left:4px"><div class="vsm">Minha agenda</div><div class="mut">Provas e eventos</div></div><i class="ti ti-chevron-right" style="color:var(--txm)"></i></div>
+    <div class="dv"></div>
+    <div class="row" style="padding:12px 0;cursor:pointer" onclick="go('sc-student-conforto')"><i class="ti ti-adjustments" style="font-size:20px;color:var(--pu)"></i><div class="col" style="margin-left:4px"><div class="vsm">Meu conforto</div><div class="mut">Ajustar texto e fundo</div></div><i class="ti ti-chevron-right" style="color:var(--txm)"></i></div>
+    <div class="dv"></div>
+    <div class="row" style="padding:12px 0;cursor:pointer" onclick="go('sc-student-pausa')"><i class="ti ti-hand-stop" style="font-size:20px;color:var(--wn)"></i><div class="col" style="margin-left:4px"><div class="vsm">Pedir uma pausa</div><div class="mut">Avisar a professora</div></div><i class="ti ti-chevron-right" style="color:var(--txm)"></i></div>
+  </div>
+</div></div>
+</div>
+
+<!-- ALUNO: NOTIFICAÇÕES -->
+<div class="scr" id="sc-student-notif">
+<div class="tbar"><button class="bk" onclick="go('sc-student-home')"><i class="ti ti-arrow-left"></i></button><span class="tbt">Notificações</span></div>
+<div class="scrl"><div class="cnt">
+  <div class="notif-item unr"><div class="notif-dot"></div><div class="col"><div class="vsm">Nova atividade de Matemática!</div><div class="mut" style="color:var(--newb)">Frações · Com áudio · 4 passos</div></div></div>
+  <div class="notif-item unr"><div class="notif-dot"></div><div class="col"><div class="vsm">Professora respondeu sua pergunta</div><div class="mut">Q&A · Hoje</div></div></div>
+  <div class="notif-item"><div style="width:8px;height:8px;flex-shrink:0;margin-top:5px"></div><div class="col"><div class="vsm">Sua criação foi aprovada! 🎨</div><div class="mut">Galeria · Ontem</div></div></div>
+  <div class="notif-item"><div style="width:8px;height:8px;flex-shrink:0;margin-top:5px"></div><div class="col"><div class="vsm">Desafio: 3 de 5 dias! Continue!</div><div class="mut">Desafios · Ontem</div></div></div>
+</div></div>
+</div>
+
+</div><!-- /wrap -->
+
+<script>
+// NAV
+function go(id){
+  document.querySelectorAll('.scr').forEach(function(s){s.classList.remove('on');s.style.display='none'});
+  var t=document.getElementById(id);
+  if(t){t.style.display='flex';t.classList.add('on')}
+  if(id==='sc-prof-adapt-result')showAdap('lucas');
+  if(id==='sc-student-ativ')showPasso(1);
+}
+
+// HUMOR
+function setMood(e,l){
+  document.getElementById('mood-msg').style.display='flex';
+  document.getElementById('mood-txt').textContent='Registrei: '+e+' '+l+' — obrigado!';
+  toast('Humor registrado ✓');
+}
+
+// LOADING IA
+function adaptarIA(){
+  var ld=document.getElementById('loading');
+  var msgs=[
+    ['Analisando a atividade...','Extraindo conceitos pedagógicos'],
+    ['Consultando perfil do Lucas...','Tokens: passo a passo · áudio · exemplo concreto'],
+    ['Consultando perfil da Sofia...','Tokens: texto curto · checklist · negrito'],
+    ['Consultando perfil do Pedro...','Tokens: espaçamento extra · áudio · vocabulário simples'],
+    ['Gerando 3 versões adaptadas...','Preservando o objetivo pedagógico em todas']
+  ];
+  ld.style.display='flex';ld.classList.add('on');
+  var i=0;
+  var iv=setInterval(function(){
+    if(i<msgs.length){document.getElementById('sp-txt').textContent=msgs[i][0];document.getElementById('sp-sub').textContent=msgs[i][1];i++;}
+    else{clearInterval(iv);ld.style.display='none';ld.classList.remove('on');go('sc-prof-adapt-result');}
+  },900);
+}
+
+// ADAPTAÇÕES
+var ADAPS={
+  lucas:{nome:'Lucas',emoji:'🧒',diag:'TEA grau 1',chips:['📋 4 passos','🎧 Áudio','🍕 Exemplo cotidiano','🔤 Fonte ampliada'],
+    xai:'Perfil consultado: textos longos → passos numerados · linguagem abstrata → exemplo concreto · áudio ativado',
+    orig:'Uma fração representa uma parte de um todo. O numerador indica quantas partes foram tomadas, e o denominador indica em quantas partes iguais o todo foi dividido. Exercício: Uma pizza foi cortada em 8 partes iguais. João comeu 3 partes. Escreva a fração.',
+    adap:'<strong>Passo 1:</strong> Imagine uma pizza cortada em 8 pedaços iguais.<br><br><strong>Passo 2:</strong> O João comeu 3 pedaços.<br><br><strong>Passo 3:</strong> A fração é 3/8 — "3 de 8 pedaços".<br><br><strong>Passo 4:</strong> Agora escreva você! ✏️'
+  },
+  sofia:{nome:'Sofia',emoji:'👧',diag:'TDAH',chips:['⚡ Texto curto','☑ Checklist','👁 Palavras em negrito'],
+    xai:'Perfil consultado: parágrafos encurtados · palavras-chave em negrito · checklist para manter foco',
+    orig:'Uma fração representa uma parte de um todo. O numerador indica quantas partes foram tomadas, e o denominador indica em quantas partes iguais o todo foi dividido. Exercício: Uma pizza foi cortada em 8 partes iguais. João comeu 3 partes. Escreva a fração.',
+    adap:'<strong>Fração</strong> = parte de um todo.<br><br>Pizza: <strong>8</strong> pedaços. João comeu <strong>3</strong>.<br>Fração = <strong>3/8</strong><br><br>☑ Li o exemplo<br>☑ Sei o número de cima (3)<br>☑ Sei o número de baixo (8)<br>☐ Escrevi a fração: ___'
+  },
+  pedro:{nome:'Pedro',emoji:'👦',diag:'Dislexia',chips:['↕ Espaçamento extra','🎧 Áudio','📖 Vocabulário simples'],
+    xai:'Perfil consultado: espaçamento entre linhas aumentado · palavras longas substituídas · áudio disponível',
+    orig:'Uma fração representa uma parte de um todo. O numerador indica quantas partes foram tomadas, e o denominador indica em quantas partes iguais o todo foi dividido. Exercício: Uma pizza foi cortada em 8 partes iguais. João comeu 3 partes. Escreva a fração.',
+    adap:'<div style="line-height:2.4;font-size:15px">Uma  fração  é  quando  a  gente  divide  algo  em  partes  iguais.<br><br>A  pizza  tem  8  pedaços.  O  João  comeu  3  pedaços.<br><br>A  fração  é: <strong style="font-size:22px;letter-spacing:3px"> 3 / 8</strong><br><br>Você  lê:  três  oitavos.</div>'
+  }
+};
+var curA='lucas';
+function showAdap(a){
+  curA=a;
+  ['lucas','sofia','pedro'].forEach(function(x){document.getElementById('tab-r'+x[0]).classList.toggle('on',x===a)});
+  var A=ADAPS[a];
+  document.getElementById('adap-body').innerHTML='<div class="cnt">'+
+    '<div class="row"><div style="width:40px;height:40px;border-radius:50%;background:var(--acl);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">'+A.emoji+'</div><div class="col"><div class="vsm">'+A.nome+'</div><div class="mut">'+A.diag+'</div></div></div>'+
+    '<div style="display:flex;gap:6px;flex-wrap:wrap">'+A.chips.map(function(c){return '<span class="chip cnew">'+c+'</span>'}).join('')+'</div>'+
+    '<div class="orig-box"><div class="ob-l">Atividade original</div><p>'+A.orig+'</p></div>'+
+    '<div style="text-align:center;color:var(--txm);font-size:13px">⬇ Versão adaptada ⬇</div>'+
+    '<div class="adap-box"><div class="ob-l">Versão do '+A.nome+'</div><p>'+A.adap+'</p><div class="xai">✦ '+A.xai+'</div></div>'+
+    '<div class="alr as"><i class="ti ti-shield-check ico"></i><div class="at"><div class="atit">Objetivo pedagógico preservado</div>O conceito de fração é ensinado da mesma forma — apenas o formato mudou.</div></div>'+
+    '<button class="btn bnew" onclick="toast(\'✓ Enviado para '+A.nome+' — aparecerá no app dele agora\')"><i class="ti ti-send"></i>Aprovar e enviar para '+A.nome+'</button>'+
+    '<button class="btn" onclick="toast(\'Você pode editar antes de enviar ✓\')"><i class="ti ti-edit"></i>Editar antes de enviar</button>'+
+    '<div style="height:16px"></div>'+
+  '</div>';
+}
+
+// PASSOS
+var PASSOS=[
+  {t:'Passo 1 de 4',ico:'🍕',q:'Imagine uma pizza cortada em 8 pedaços iguais.',d:'Cada pedaço é igual ao outro — nenhum maior, nenhum menor.'},
+  {t:'Passo 2 de 4',ico:'🍽️',q:'O João comeu 3 pedaços dessa pizza.',d:'Só 3 pedaços, não todos os 8.'},
+  {t:'Passo 3 de 4',ico:'➗',q:'A fração mostra isso:',d:'<strong style="font-size:32px;display:block;text-align:center;margin:12px 0;color:var(--act)">3/8</strong>O número de baixo (8) = total de pedaços.<br>O número de cima (3) = pedaços que o João comeu.'},
+  {t:'Passo 4 de 4',ico:'✏️',q:'Agora é sua vez!',d:'Escreva a fração:<br><input type="text" placeholder="___/___" style="width:120px;text-align:center;font-size:24px;margin-top:12px"><br><div class="mut" style="margin-top:8px;font-size:12px">Dica: quantos pedaços no total? Quantos o João comeu?</div>'}
+];
+function showPasso(n){
+  document.getElementById('passo-badge').textContent=PASSOS[n-1].t;
+  var P=PASSOS[n-1];
+  document.getElementById('passo-body').innerHTML=
+    '<div style="padding:4px 0"><div class="bw"><div class="bf" style="width:'+((n-1)/4*100)+'%;background:var(--ac)"></div></div><div class="mut" style="font-size:11px;margin-top:4px;padding-bottom:8px">'+(n-1)+' de 4 passos concluídos</div></div>'+
+    '<div style="text-align:center;font-size:60px;padding:16px 0">'+P.ico+'</div>'+
+    '<div class="card" style="gap:10px">'+
+      '<div style="font-size:16px;font-weight:600;color:var(--tx);line-height:1.6">'+P.q+'</div>'+
+      '<div style="font-size:14px;color:var(--txs);line-height:1.8">'+P.d+'</div>'+
+      '<button class="btn bsec" onclick="toast(\'🔊 Lendo em voz alta...\')"><i class="ti ti-volume"></i>Ouvir este passo</button>'+
+    '</div>'+
+    (n<4?'<button class="btn bacc" onclick="showPasso('+(n+1)+')"><i class="ti ti-arrow-right"></i>Próximo passo</button>':
+         '<button class="btn bacc" onclick="toast(\'🎉 Muito bem, Lucas! Atividade concluída! +5 estrelas ⭐\');setTimeout(function(){go(\'sc-student-ativs\')},2000)"><i class="ti ti-check"></i>Concluir atividade!</button>')+
+    (n>1?'<button class="btn" onclick="showPasso('+(n-1)+')"><i class="ti ti-arrow-left"></i>Passo anterior</button>':'');
+}
+
+// PAUSA
+function selBreak(id){document.querySelectorAll('.break-opt').forEach(function(b){b.classList.remove('sel')});document.getElementById(id).classList.add('sel')}
+function solicitarPausa(){toast('Professora avisada ✓ — ela vai até você');setTimeout(function(){go('sc-student-home')},2000)}
+
+// CHAT
+function sendMsg(inp,scr){
+  if(!inp.value.trim())return;
+  var cont=document.querySelector('#'+scr+' .chat-msgs');
+  var b=document.createElement('div');b.className='bubble bme';b.textContent=inp.value;cont.appendChild(b);
+  inp.value='';cont.scrollTop=cont.scrollHeight;
+  setTimeout(function(){
+    var r=document.createElement('div');r.className='bubble bth';
+    r.textContent='Mensagem recebida — vou responder em breve!';
+    cont.appendChild(r);cont.scrollTop=cont.scrollHeight;
+  },800);
+}
+
+// TOAST
+function toast(msg){
+  var d=document.createElement('div');d.className='toast';d.textContent=msg;
+  document.body.appendChild(d);setTimeout(function(){d.remove()},2400);
+}
+</script>
+</body>
+</html>

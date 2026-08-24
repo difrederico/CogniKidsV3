@@ -115,7 +115,44 @@ class TestRevogacao:
             'dados_biometricos': {'bpm': 90},
         })
         assert depois.status_code == 403
-        assert db.registros_iot.count_documents({}) == 1
+        # A revogacao elimina o historico ja coletado, nao so bloqueia
+        # ingestao futura — sem finalidade legitima para reter dado
+        # biometrico de uma crianca cuja coleta deixou de ser autorizada.
+        assert db.registros_iot.count_documents({}) == 0
+
+    def test_revogacao_elimina_alertas_biometricos_existentes(
+        self, vinculo_responsavel, estudante, db
+    ):
+        vinculo_responsavel.put(f'/api/consent/{estudante.id}', json={
+            'finalidades': {'uso_app': True, 'coleta_biometrica': True},
+        })
+
+        db.alerts.insert_one({'aluno_id': estudante.oid, 'severity': 'high', 'resolvido': False})
+        db.registros_iot.insert_one({'aluno_id': estudante.oid, 'dados_biometricos': {'bpm': 140}})
+        assert db.alerts.count_documents({'aluno_id': estudante.oid}) == 1
+        assert db.registros_iot.count_documents({'aluno_id': estudante.oid}) == 1
+
+        vinculo_responsavel.delete(f'/api/consent/{estudante.id}')
+
+        assert db.alerts.count_documents({'aluno_id': estudante.oid}) == 0
+        assert db.registros_iot.count_documents({'aluno_id': estudante.oid}) == 0
+
+    def test_revogar_compartilhamento_isolado_nao_apaga_biometria(
+        self, vinculo_responsavel, estudante, db
+    ):
+        """Revogar so o compartilhamento com a escola nao apaga dado —
+        so tira a visibilidade do professor; a coleta biometrica continua
+        autorizada e legitima."""
+        vinculo_responsavel.put(f'/api/consent/{estudante.id}', json={
+            'finalidades': {'uso_app': True, 'coleta_biometrica': True, 'compartilhar_escola': True},
+        })
+        db.registros_iot.insert_one({'aluno_id': estudante.oid, 'dados_biometricos': {'bpm': 100}})
+
+        vinculo_responsavel.put(f'/api/consent/{estudante.id}', json={
+            'compartilhar_escola': False,
+        })
+
+        assert db.registros_iot.count_documents({'aluno_id': estudante.oid}) == 1
 
 
 class TestEnforcementDaColeta:

@@ -226,7 +226,6 @@ class TestFluxoResponsavel:
 
     def test_ciclo_completo_do_kit_de_apoio(self, vinculo_responsavel, estudante):
         criacao = vinculo_responsavel.put(f'/api/support-kit/{estudante.id}', json={
-            'neurodivergencia': 'TEA nivel 1',
             'interesses': ['dinossauros'],
             'sensibilidades': ['ruido alto'],
             'estrategias_calmantes': 'ambiente silencioso e fone abafador',
@@ -236,7 +235,30 @@ class TestFluxoResponsavel:
 
         leitura = vinculo_responsavel.get(f'/api/support-kit/{estudante.id}')
         assert leitura.status_code == 200
-        assert leitura.get_json()['data']['neurodivergencia'] == 'TEA nivel 1'
+        assert leitura.get_json()['data']['estrategias_calmantes'] == (
+            'ambiente silencioso e fone abafador'
+        )
+
+    def test_kit_nao_aceita_nem_devolve_diagnostico(self, vinculo_responsavel, estudante):
+        """ADR-003: o sistema nao armazena diagnostico.
+
+        O kit tinha um campo 'neurodivergencia' de texto livre que guardava
+        exatamente isso, era devolvido ao professor e — pior — ao proprio
+        aluno, ja que pode_ver_aluno libera o proprio usuario. Este teste
+        falha se o campo voltar por qualquer caminho.
+        """
+        vinculo_responsavel.put(f'/api/support-kit/{estudante.id}', json={
+            'neurodivergencia': 'TEA nivel 1',
+            'estrategias_calmantes': 'ambiente silencioso',
+        })
+
+        dados = vinculo_responsavel.get(
+            f'/api/support-kit/{estudante.id}'
+        ).get_json()['data']
+
+        assert 'neurodivergencia' not in dados, (
+            'REGRESSAO: campo de diagnostico voltou ao Kit de Apoio (ADR-003)'
+        )
 
     def test_professor_da_turma_le_o_kit(self, professor, turma, vinculo_responsavel,
                                          estudante):
@@ -267,7 +289,7 @@ class TestFluxoResponsavel:
 
 
 class TestComunicacao:
-    def test_professor_e_responsavel_trocam_mensagens(self, professor, responsavel):
+    def test_professor_e_responsavel_trocam_mensagens(self, professor, responsavel, turma, vinculo_responsavel):
         envio = professor.post('/api/messages', json={
             'to_user_id': responsavel.id, 'content': 'Bom dia, podemos conversar?',
         })
@@ -282,7 +304,13 @@ class TestComunicacao:
                            json={'to_user_id': outro_professor.id, 'content': 'oi'})
         assert r.status_code == 403
 
-    def test_marca_mensagem_como_lida(self, professor, responsavel):
+    def test_nao_envia_sem_vinculo_comprovado(self, professor, responsavel):
+        """Professor e responsavel sem nenhum aluno em comum nao podem se mensagear."""
+        r = professor.post('/api/messages',
+                           json={'to_user_id': responsavel.id, 'content': 'oi'})
+        assert r.status_code == 403
+
+    def test_marca_mensagem_como_lida(self, professor, responsavel, turma, vinculo_responsavel):
         envio = professor.post('/api/messages',
                                json={'to_user_id': responsavel.id, 'content': 'oi'})
         message_id = envio.get_json()['message_id']
@@ -290,7 +318,7 @@ class TestComunicacao:
         assert responsavel.put(f'/api/messages/{message_id}/read').status_code == 200
         assert responsavel.get('/api/messages/unread/count').get_json()['count'] == 0
 
-    def test_mensagem_gera_notificacao(self, professor, responsavel):
+    def test_mensagem_gera_notificacao(self, professor, responsavel, turma, vinculo_responsavel):
         professor.post('/api/messages',
                        json={'to_user_id': responsavel.id, 'content': 'oi'})
 
@@ -361,3 +389,24 @@ class TestGaleria:
             content_type='multipart/form-data',
         )
         assert r.status_code == 400
+
+    def test_arquivo_so_e_servido_a_quem_pode_ver_a_turma(self, professor, outro_professor, turma, estudante):
+        import io
+
+        envio = estudante.post(
+            '/api/gallery/upload',
+            data={
+                'file': (io.BytesIO(b'conteudo-de-teste'), 'desenho.png'),
+                'class_id': str(turma),
+                'title': 'Desenho',
+            },
+            content_type='multipart/form-data',
+        )
+        assert envio.status_code == 201
+        file_url = professor.get(
+            f'/api/gallery/class/{turma}/pending'
+        ).get_json()['data'][0]['file_url']
+
+        assert estudante.get(file_url).status_code == 200
+        assert professor.get(file_url).status_code == 200
+        assert outro_professor.get(file_url).status_code == 403

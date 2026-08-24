@@ -1,0 +1,122 @@
+
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8">
+<title>Documento de Arquitetura CogniKids</title>
+<style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    h1, h2, h3 { color: #2e74b5; }
+    pre { background-color: #f4f4f4; padding: 15px; border-radius: 5px; font-family: 'Courier New', Courier, monospace; font-size: 10pt; }
+    ul { margin-top: 5px; }
+    li { margin-bottom: 10px; }
+</style>
+</head>
+<body>
+
+<h1>Documento de Arquitetura e Integração Acadêmica</h1>
+<p><strong>Projeto:</strong> CogniKids (Project-CK)<br>
+<strong>Módulo:</strong> Computação Distribuída (3º Período)</p>
+
+<h2>1. Visão Geral do Ecossistema CogniKids</h2>
+
+<h3>O Problema da Inclusão em Salas de Aula Regulares</h3>
+<p>Atualmente, o modelo de ensino tradicional exige que um único professor lecione para turmas de trinta ou mais alunos utilizando o mesmo material didático. Para crianças neuroatípicas (com Transtorno do Espectro Autista - TEA, TDAH, Dislexia, entre outros), um material padronizado frequentemente atua como uma barreira cognitiva e sensorial. Textos longos, excesso de estímulos visuais ou formatação não estruturada podem engatilhar crises de ansiedade, sobrecarga sensorial e evasão do aprendizado. Diante da impossibilidade humana de um professor reescrever manualmente a mesma aula em cinco formatos diferentes todos os dias, a inclusão real torna-se inviável.</p>
+
+<h3>A Solução: De Monitoramento Passivo a Agente Educacional Ativo</h3>
+<p>O <strong>CogniKids (Project-CK)</strong> é uma plataforma B2B2C de Inteligência Artificial Aplicada à Educação Inclusiva desenhada para resolver essa lacuna estrutural. Em sua versão anterior, o ecossistema operava como um sistema de monitoramento passivo, coletando sinais vitais via IoT (pulseiras M5Stack captando BPM e GSR) para gerar alertas de desregulação emocional para os professores.</p>
+<p>Nesta nova fase do projeto, a plataforma evolui para atuar como um <strong>Agente Educacional Ativo e Adaptativo</strong>. O sistema agora funciona como um "tradutor pedagógico bidirecional". Quando o professor insere o material padrão de sua aula, a Inteligência Artificial entra em ação antes de a atividade chegar ao aluno. Ela analisa o texto, cruza essas informações com o Perfil Cognitivo do aluno (modelado através da Mineração de Grafos) e recodifica a matéria em tempo real. O formato final pode ser transformado em um infográfico passo a passo, um conteúdo em áudio, ou um texto com pictogramas e baixo estímulo visual, respeitando a forma como aquela criança aprende melhor.</p>
+<p>Nesta arquitetura, a telemetria IoT (batimentos cardíacos e suor) deixa de ser apenas um "alerta" e passa a ser o <strong>Loop de Feedback Contínuo</strong>. Se a IA adaptar um texto e o aluno apresentar um pico de ansiedade ao tentar resolvê-lo, o sistema aprende que a adaptação falhou e atualiza o Grafo de Conhecimento para gerar blocos ainda menores na próxima iteração.</p>
+
+<h3>Estratégia Metodológica: O Arcabouço Multi-Dataset</h3>
+<p>Para garantir a conformidade ética e a Privacidade <i>by Design</i> exigida pela LGPD e regulações de proteção a menores, o CogniKids não utiliza diagnósticos médicos sensíveis reais. A inteligência de adaptação e a extração de conceitos são treinadas e validadas através de um <strong>arcabouço Multi-Dataset</strong>, cruzando bases de dados abertas amplamente validadas na comunidade científica:</p>
+<ul>
+    <li><strong>Mineração Textual e Linguística (CommonLit Readability Prize):</strong> Utilizado para calibrar o LLM na simplificação da linguagem. O modelo utiliza as métricas de complexidade textual deste dataset para garantir que a recodificação da matéria do professor atinja exatamente o nível de legibilidade e carga cognitiva adequado para a criança.</li>
+    <li><strong>Extração de Intenção Pedagógica (Educational Bloom's Taxonomy):</strong> Aplicado durante a leitura do material original. Garante que, ao resumir e adaptar um texto, a IA (LLM) não remova o conceito central que o professor deseja ensinar (ex: memorização, análise de causa-efeito, interpretação).</li>
+    <li><strong>Rastreamento de Conhecimento e Resiliência (ASSISTments / EdNet):</strong> Estes datasets clássicos de <i>Educational Data Mining</i> fornecem logs reais de alunos interagindo com tutores inteligentes (tempo de resposta, taxa de erro, solicitação de dicas). Eles baseiam as arestas de dependência no Grafo de Conhecimento, simulando como o aluno progride ou desiste diante da dificuldade.</li>
+    <li><strong>Análise de Variabilidade Comportamental em Interação (Data Science Bowl 2019 / PBS KIDS & Jo Wilder PSP Raw):</strong> Bases estruturais que simulam a telemetria de interação e tomada de decisão. São cruzadas com o pipeline IoT para validar a capacidade do modelo de Machine Learning de agrupar padrões anômalos de navegação e atrito (frustração).</li>
+</ul>
+<p>Essa abordagem robusta legitima o desenvolvimento científico da plataforma, demonstrando que é possível criar adaptações curriculares de ponta utilizando aprendizado federado e processamento distribuído sem violar a privacidade de dados diagnósticos.</p>
+
+<h2>2. Fluxograma de Arquitetura Distribuída</h2>
+<p>O diagrama abaixo ilustra o ecossistema completo, destacando a separação de microsserviços, a ingestão contínua de dados e o processamento paralelo.</p>
+<pre>
++-----------------------------------------------------------------------------------+
+|                         CAMADA DE PERCEPÇÃO E EDGE (IoT)                          |
+|  +----------------+      +----------------+      +----------------+               |
+|  | Pulseira Aluno | ---> | Pulseira Aluno | ---> | Pulseira Aluno | (M5Stack)     |
+|  | (BPM, GSR, Mov)|      | (BPM, GSR, Mov)|      | (BPM, GSR, Mov)|               |
++-----------------------------------------------------------------------------------+
+          |                      |                       |
+          v                      v                       v
++-----------------------------------------------------------------------------------+
+|                    CAMADA DE MENSAGERIA E BUFFER (Distribuída)                    |
+|  +--------------------+       +------------------------------------+              |
+|  | Mosquitto (MQTT)   | ----> | Redis Queue (Buffer Elástico)      |              |
+|  | (Broker de Eventos)|       | (Absorve picos de concorrência)    |              |
++-----------------------------------------------------------------------------------+
+                                         |
+                                         v
++-----------------------------------------------------------------------------------+
+|                   CAMADA DE INTELIGÊNCIA E DADOS (Cloud / GCP)                    |
+|  +--------------------------+          +---------------------------------------+  |
+|  | ML Anomaly Detection     | -------> | MongoDB (Replica Set)                 |  |
+|  | (Random Forest: Crises)  |          | - Registros IoT, Alertas, Perfis      |  |
+|  +--------------------------+          +---------------------------------------+  |
++-----------------------------------------------------------------------------------+
+                                         | (Feedback de Estresse)
+                                         v
++-----------------------------------------------------------------------------------+
+|                  CAMADA DE ADAPTAÇÃO ATIVA (Processamento Paralelo)               |
+|                                                                                   |
+|  [ ENTRADA DO PROFESSOR ] ---> (Texto longo da disciplina)                        |
+|                                         |                                         |
+|  +---------------------+   +---------------------------+   +-------------------+  |
+|  | 1. Text Mining (LLM)|   | 2. Graph Mining (Perfil)  |   | 3. Adaptação (LLM)|  |
+|  | Extrai conceitos e  |-->| Consulta o Grafo do Aluno |-->| AWS Bedrock       |  |
+|  | dependências lógicas|   | (Lê imagens? Fica ansioso?|   | (Claude/Nova)     |  |
+|  +---------------------+   +---------------------------+   +-------------------+  |
+|                                                                                   |
+|  [ SAÍDA ADAPTADA ] <--- (Atividade formatada: Pictogramas, Passos Curtos, etc.)  |
++-----------------------------------------------------------------------------------+
+</pre>
+
+<h2>3. Mapeamento das Disciplinas do 3º Período</h2>
+
+<h3>A. Computação Paralela</h3>
+<ul>
+    <li><strong>Aplicação no Projeto:</strong> Uma sala de aula possui dezenas de alunos. Quando o professor envia uma atividade única, o backend não pode adaptar o texto sequencialmente (um aluno por vez), sob pena de estrangular a rede e gerar <em>timeouts</em>.</li>
+    <li><strong>Solução:</strong> O sistema utiliza processamento paralelo (via <em>workers</em> assíncronos) para disparar múltiplas chamadas concorrentes aos LLMs (AWS Bedrock) e consultas simultâneas ao Grafo de Conhecimento, gerando 30 versões da mesma atividade ao mesmo tempo. A avaliação contínua da fila do Redis também ocorre paralelamente à API principal.</li>
+</ul>
+
+<h3>B. Sistemas Distribuídos e Computação em Nuvem</h3>
+<ul>
+    <li><strong>Aplicação no Projeto:</strong> A arquitetura do CogniKids quebra o monólito tradicional.</li>
+    <li><strong>Solução:</strong> O sistema é fortemente desacoplado. Temos a borda (<em>Edge Computing</em>) coletando dados via ESP32/M5Stack, um broker MQTT para <em>pub/sub</em>, um banco em memória (Redis) gerenciando o <em>throughput</em>, e contêineres Docker orquestrando a API Flask e os workers de ML. Toda a inferência pesada de linguagem natural é terceirizada para a nuvem usando a infraestrutura do <strong>AWS Bedrock</strong>, garantindo escalabilidade global sem sobrecarregar os servidores locais.</li>
+</ul>
+
+<h3>C. Data Mining e Graph Mining</h3>
+<ul>
+    <li><strong>Aplicação no Projeto (Data Mining):</strong> Aplicação da metodologia CRISP-DM para extrair padrões dos registros biométricos (<code>registros_iot</code>) e identificar anomalias (crises sensoriais) em tempo real. Além disso, o <em>Text Mining</em> é usado para dissecar o texto do professor e classificar a complexidade semântica da atividade utilizando os modelos treinados na base <i>CommonLit</i> e <i>Bloom's Taxonomy</i>.</li>
+    <li><strong>Aplicação no Projeto (Graph Mining):</strong> O perfil do aluno não é uma tabela relacional engessada. Ele é um <strong>Grafo de Conhecimento</strong>. Nós representam o aluno, conceitos e formatos (visual, textual), enquanto as arestas representam o domínio ou a dificuldade. A mineração varre esse grafo para encontrar o "caminho de aprendizado de menor atrito" para cada criança neuroatípica.</li>
+</ul>
+
+<h3>D. Ética em Inteligência Artificial</h3>
+<ul>
+    <li><strong>Aplicação no Projeto:</strong> O monitoramento de crianças neurodivergentes impõe um desafio ético rigoroso frente à LGPD e legislações de proteção a menores.</li>
+    <li><strong>Solução:</strong> O CogniKids adota a <em>Privacidade by Design</em>. O sistema não exige, não armazena e não utiliza laudos médicos (ex: "Aluno tem TEA" ou "TDAH"). A adaptação e as detecções são baseadas estritamente em <strong>comportamento observável e variabilidade fisiológica</strong> (Mineração Comportamental). A adoção da estratégia <i>Multi-Dataset</i> para treinamento e validação do sistema (sem depender de dados médicos de usuários reais da plataforma) blinda o ecossistema contra vazamentos e garante rigor científico sem ferir o sigilo e a privacidade dos estudantes. O sistema também possui um módulo robusto de revogação de consentimento (<code>consent_model.py</code>) de efeito imediato.</li>
+</ul>
+
+<h3>E. Empreendedorismo</h3>
+<ul>
+    <li><strong>Aplicação no Projeto:</strong> Sustentabilidade do modelo de negócio e escalabilidade.</li>
+    <li><strong>Solução:</strong> O CogniKids foi modelado com uma arquitetura <strong>B2B2C (SaaS)</strong>. A venda é direcionada às instituições de ensino (B2B), agregando valor à escola através de relatórios de inclusão e painéis de acessibilidade para o professor, enquanto o benefício final e os ajustes de acessibilidade chegam diretamente à família e à criança (B2C). A flexibilidade da nuvem e a modularidade da IA permitem escalar o produto de forma ágil para redes de ensino públicas e privadas com baixo custo marginal de expansão.</li>
+</ul>
+
+<h3>F. Projeto de Extensão Integrador - Computação Distribuída</h3>
+<ul>
+    <li><strong>Aplicação no Projeto:</strong> A materialização e orquestração de todo o ecossistema.</li>
+    <li><strong>Solução:</strong> A disciplina une as partes soltas. É aqui que o código ganha forma, integrando os pipelines de orquestração assíncrona, bases NoSQL e modelagem baseada em nuvem. É o arcabouço central onde o artigo científico do <strong>Project-CK</strong> é fundamentado, comprovando através de implantação técnica que sistemas distribuídos, alinhados à mineração de grafos e RAG, podem automatizar processos de acessibilidade, democratizando a educação para perfis neuroatípicos em escala.</li>
+</ul>
+
+</body>
+</html>

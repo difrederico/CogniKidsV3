@@ -27,9 +27,15 @@ from app.Utils.responses import (
 
 logger = logging.getLogger(__name__)
 
-UPLOAD_FOLDER = os.getenv(
+UPLOAD_FOLDER = os.path.abspath(os.getenv(
     'UPLOAD_FOLDER', os.path.join(os.getcwd(), 'uploads')
-)
+))
+# Sempre absoluto: se UPLOAD_FOLDER vier relativo da variavel de ambiente,
+# o Flask `send_from_directory` resolve caminho relativo contra
+# `current_app.root_path` (a pasta de `app/`), nao contra o diretorio onde
+# o arquivo foi de fato salvo (relativo ao cwd do processo) — os dois
+# nunca coincidiam, e todo GET de arquivo da galeria retornava 404/500. Bug
+# real, encontrado ao escrever o teste de controle de acesso deste endpoint.
 EXTENSOES_PERMITIDAS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'pdf', 'txt', 'mp4'}
 
 gallery_blueprint = Blueprint('gallery_bp', __name__)
@@ -120,12 +126,27 @@ def upload_creation(current_user):
 @gallery_blueprint.route('/gallery/files/<path:filename>', methods=['GET'])
 @token_required
 def get_file(current_user, filename):
-    """Serve um arquivo da galeria a usuarios autenticados."""
+    """Serve um arquivo da galeria — apenas a quem pode ver a turma dona da criacao.
+
+    Antes servia qualquer arquivo a qualquer usuario autenticado, sem checar
+    a turma (diferente dos demais endpoints da galeria, que ja checam
+    `pode_ver_turma`) — uma criacao de uma crianca ficava acessivel a
+    qualquer conta logada no sistema, bastando adivinhar/obter o nome do
+    arquivo.
+    """
     try:
         nome_seguro = secure_filename(filename)
         caminho = os.path.join(UPLOAD_FOLDER, nome_seguro)
         if not os.path.isfile(caminho):
             return nao_encontrado('Arquivo nao encontrado')
+
+        criacao = gallery_model.get_creation_by_filename(nome_seguro)
+        if not criacao:
+            return nao_encontrado('Arquivo nao encontrado')
+
+        turma = class_model.get_class_by_id(criacao['class_id'])
+        if not pode_ver_turma(current_user, turma):
+            return nao_autorizado('Acesso nao autorizado a este arquivo')
 
         return send_from_directory(UPLOAD_FOLDER, nome_seguro)
 

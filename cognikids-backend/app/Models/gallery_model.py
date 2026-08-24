@@ -63,6 +63,19 @@ class GalleryModel:
             return None
         return mongo.db.gallery_creations.find_one({"_id": oid})
 
+    def get_creation_by_filename(self, filename):
+        """Busca a criação dona de um arquivo, pelo nome salvo em disco.
+
+        file_url é sempre gravado como '/api/gallery/files/{nome_final}'
+        (ver gallery_controller.upload_creation) — reconstruo a mesma string
+        exata em vez de usar regex, evitando qualquer risco de o nome do
+        arquivo (entrada de usuário, ainda que já filtrada por
+        secure_filename) ser interpretado como padrão de regex.
+        """
+        return mongo.db.gallery_creations.find_one({
+            "file_url": f"/api/gallery/files/{filename}"
+        })
+
     def approve_creation(self, creation_id, professor_id):
         """Permite que um professor aprove uma criação para ser exibida."""
         oid = _to_object_id(creation_id)

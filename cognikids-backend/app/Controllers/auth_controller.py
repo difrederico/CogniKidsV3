@@ -10,7 +10,7 @@ from app.Utils.decorators import token_required
 from app.Utils.responses import dados_invalidos, erro, erro_interno, sucesso
 from app.Utils.roles import (
     ROLE_FRONTEND,
-    TIPOS_PERMITIDOS,
+    TIPOS_AUTOREGISTRAVEIS,
     normalizar_tipo,
 )
 from app.Utils.validators import validate_email
@@ -48,9 +48,13 @@ def register():
                 f'A senha deve ter pelo menos {SENHA_MIN_LEN} caracteres'
             )
 
-        if tipo not in TIPOS_PERMITIDOS:
+        # Rota publica: so aceita os perfis auto-registraveis. Admin fica de
+        # fora de proposito (ver TIPOS_AUTOREGISTRAVEIS em Utils/roles.py) —
+        # aceitar 'admin' aqui dava a qualquer anonimo um perfil que ignora
+        # consentimento e enxerga todas as criancas da base.
+        if tipo not in TIPOS_AUTOREGISTRAVEIS:
             return dados_invalidos(
-                f'Tipo de usuario invalido. Tipos permitidos: {", ".join(TIPOS_PERMITIDOS)}'
+                f'Tipo de usuario invalido. Tipos permitidos: {", ".join(TIPOS_AUTOREGISTRAVEIS)}'
             )
 
         if user_model.find_user_by_email(email):

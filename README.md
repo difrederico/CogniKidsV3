@@ -13,11 +13,11 @@
 [![Redis](https://img.shields.io/badge/Redis-Buffer-DC382D.svg?logo=redis&logoColor=white)](https://redis.io/)
 [![MongoDB](https://img.shields.io/badge/MongoDB-Persistence-47A248.svg?logo=mongodb&logoColor=white)](https://www.mongodb.com/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-Dashboard-FF4B4B.svg?logo=streamlit&logoColor=white)](https://streamlit.io/)
-[![SBCUP](https://img.shields.io/badge/Paper-SBCUP%202026%20(no%20prelo)-brightgreen.svg)]()
 [![Status](https://img.shields.io/badge/Status-Fase%201%20%7C%20Prova%20de%20Conceito-orange.svg)]()
 
-> Repositório oficial com o código-fonte da Prova de Conceito (PoC) referente ao artigo
-> aceito para apresentação no **Simpósio Brasileiro de Computação Ubíqua e Pervasiva (SBCUP) 2026**.
+> Repositório oficial com o código-fonte do CogniKids — uma plataforma educacional
+> e terapêutica para crianças neurodivergentes que conecta Professor, Pais e Aluno
+> em torno de dados reais de comportamento e aprendizagem.
 
 </div>
 
@@ -33,7 +33,6 @@
 - [Considerações Éticas](#considerações-éticas)
 - [Reprodutibilidade](#reprodutibilidade)
 - [Material Complementar](#material-complementar)
-- [Como Citar](#como-citar)
 - [Licença](#licença)
 - [Autores](#autores)
 
@@ -53,7 +52,6 @@ A solução foi concebida como ponte tecnológica entre o ambiente escolar e fam
 
 | Item                       | Situação                                                                                  |
 |----------------------------|-------------------------------------------------------------------------------------------|
-| **Artigo Científico**      | Aceito (*in press*) — apresentação prevista para **julho de 2026** no SBCUP 2026.        |
 | **Fase Atual**             | **Fase 1** — viabilidade técnica e arquitetural com dados sintéticos.                     |
 | **Fase 2 (planejada)**     | Validação clínica supervisionada com aprovação de Comitê de Ética (CEP/CONEP).            |
 | **Fase 3 (planejada)**     | Implantação piloto em ambiente escolar inclusivo e estudo longitudinal.                   |
@@ -127,7 +125,7 @@ Interface sensível ao contexto desenvolvida em **Streamlit**, fornecendo aos ed
 
 ```
 CogniKids/
-├── cognikids-backend/              # API Flask, brokers, workers e infraestrutura Docker
+├── cognikids-backend/              # API Flask, brokers, workers e infraestrutura Docker (core)
 │   ├── app/                        # Controllers, Models, Views, Utils
 │   ├── docker-compose.yml          # MongoDB + Redis + Mosquitto + API
 │   ├── mqtt_to_redis_bridge.py     # Bridge MQTT -> Redis
@@ -139,12 +137,17 @@ CogniKids/
 │   ├── modules/                    # Login, Dashboard, Atividades, Relatórios
 │   └── assets/
 │
+├── cognikids-adapt/                # Serviço satélite: motor de adaptação curricular com IA
+│   ├── gateway/                    # FastAPI
+│   ├── workers/                    # Workers RabbitMQ
+│   └── notebooks/                  # Mineração de dados (CRISP-DM)
+│
 ├── cognikids-pulseira-m5stack/     # Firmware MicroPython (M5StickC)
 │   ├── boot.py
 │   ├── main.py
 │   └── config.example.py
 │
-└── docs/data-science/              # Notebooks, EDA e visualizações do artigo
+└── docs/data-science/              # Notebooks, EDA e visualizações
     ├── Analise_EDA.ipynb
     ├── Apresentacao_CRISP-DM.md
     ├── confusion_matrix.png
@@ -166,14 +169,12 @@ Todos os dados biométricos utilizados para o treinamento dos modelos e aferiç�
 
 ## Reprodutibilidade
 
-Para reproduzir a arquitetura descrita no artigo:
-
 ### Pré-requisitos
 - [Docker](https://docs.docker.com/get-docker/) e [Docker Compose](https://docs.docker.com/compose/install/)
 - [Python 3.9+](https://www.python.org/downloads/)
 - (Opcional) Pulseira **M5StickC** com firmware **MicroPython**
 
-### 1. Iniciar Infraestrutura e Backend
+### 1. Iniciar Infraestrutura e Backend (core)
 Inicializa os contêineres do MongoDB, Redis, *Broker* MQTT e a API Flask:
 ```bash
 cd cognikids-backend
@@ -212,23 +213,6 @@ Documentação interativa da API: `http://localhost:5001/docs`
 | Importância das *Features*             | [`docs/data-science/feature_importance.png`](docs/data-science/feature_importance.png) |
 | Curva ROC                              | [`docs/data-science/roc_curve.png`](docs/data-science/roc_curve.png) |
 | Distribuição de Latência               | [`docs/data-science/latencia_distribuicao_real.png`](docs/data-science/latencia_distribuicao_real.png) |
-
----
-
-## Como Citar
-
-> **Aviso:** o artigo foi **aceito** para o SBCUP 2026, mas ainda **não foi publicado nos anais oficiais** (apresentação prevista para julho de 2026). Até a publicação dos anais pela SBC, recomenda-se utilizar a referência abaixo na forma *"no prelo / a aparecer (in press)"*. Esta entrada será atualizada com volume, páginas e DOI assim que os anais forem disponibilizados.
-
-```bibtex
-@inproceedings{braganca2026cognikids,
-  title     = {CogniKids: Sinergia entre IoT e Intelig{\^e}ncia Artificial para o Suporte Colaborativo Fam{\'\i}lia-Escola na Educa{\c{c}}{\~a}o Inclusiva},
-  author    = {Di Bragan{\c{c}}a, Maria Clara Ribeiro and Rosa, Frederico Lemes and Santos, Willgnner Ferreira and Alves, Alisson Rodrigues},
-  booktitle = {Anais do Simp{\'o}sio Brasileiro de Computa{\c{c}}{\~a}o Ub{\'\i}qua e Pervasiva (SBCUP)},
-  year      = {2026},
-  organization = {SBC},
-  note      = {No prelo / In press}
-}
-```
 
 ---
 

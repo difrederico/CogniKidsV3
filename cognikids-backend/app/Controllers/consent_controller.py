@@ -120,7 +120,11 @@ def revoke_all(current_user, aluno_id):
         )
 
         return sucesso(
-            message='Consentimento revogado. A coleta de dados foi interrompida.',
+            message=(
+                'Consentimento revogado. A coleta de dados foi interrompida, o '
+                'professor deixa de ver os dados do aluno, e o historico '
+                'biometrico da pulseira (batimentos, movimento) foi eliminado.'
+            ),
             data={'aluno_id': str(aluno_oid), 'finalidades': estado},
         )
 

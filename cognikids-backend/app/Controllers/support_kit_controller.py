@@ -1,9 +1,13 @@
 """
 Kit de Apoio do aluno.
 
-Reune informacoes que orientam a resposta a uma crise: neurodivergencia,
-interesses, sensibilidades, estrategias de acalmamento e contatos de
-emergencia. E mantido pelo responsavel e consultado pelo professor da turma.
+Reune informacoes que orientam a resposta a uma crise: interesses,
+sensibilidades, estrategias de acalmamento e contatos de emergencia. E
+mantido pelo responsavel e consultado pelo professor da turma.
+
+Deliberadamente NAO ha campo de diagnostico — ver o comentario em
+app/Models/support_kit_model.py e a ADR-003. O que orienta a conduta e o
+comportamento observavel, nao o rotulo.
 
 Estes sao os dados mais sensiveis do sistema, entao a leitura exige vinculo
 comprovado: a versao anterior liberava para qualquer professor autenticado.
@@ -35,7 +39,6 @@ def _serializar(kit):
     return {
         '_id': str(kit.get('_id')),
         'aluno_id': str(kit.get('aluno_id')),
-        'neurodivergencia': kit.get('neurodivergencia', ''),
         'interesses': kit.get('interesses', []),
         'sensibilidades': kit.get('sensibilidades', []),
         'estrategias_calmantes': kit.get('estrategias_calmantes', ''),
@@ -61,9 +64,10 @@ def upsert_support_kit(current_user, aluno_id):
 
         data = request.get_json(silent=True) or {}
 
+        # 'neurodivergencia' nao entra, mesmo que o cliente envie: campo
+        # removido por violar a ADR-003 (ver support_kit_model.py).
         kit_data = {
             'aluno_id': aluno_oid,
-            'neurodivergencia': data.get('neurodivergencia', ''),
             'interesses': data.get('interesses', []),
             'sensibilidades': data.get('sensibilidades', []),
             'estrategias_calmantes': data.get('estrategias_calmantes', ''),

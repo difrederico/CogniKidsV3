@@ -2,6 +2,9 @@
 # CogniKids - .gitignore
 # ============================================================
 
+# --- Datasets públicos (grandes, reobtíveis via CLAUDE.md seção 5.1) ---
+datasets/raw/
+
 # --- Variáveis de ambiente e segredos ---
 .env
 .env.local

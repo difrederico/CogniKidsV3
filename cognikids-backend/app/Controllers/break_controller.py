@@ -13,7 +13,7 @@ from flask import Blueprint, request
 
 from app import mongo
 from app.Models.break_request_model import BreakRequest, RESULTADOS
-from app.Utils.authz import alunos_do_professor, pode_ver_aluno, to_object_id
+from app.Utils.authz import alunos_visiveis, pode_ver_aluno, to_object_id
 from app.Utils.decorators import estudante_required, professor_required, token_required
 from app.Utils.responses import (
     dados_invalidos,
@@ -147,9 +147,16 @@ def my_breaks(current_user):
 @token_required
 @professor_required
 def pending_breaks(current_user):
-    """(PROFESSOR) Pedidos em aberto dos alunos das suas turmas."""
+    """(PROFESSOR) Pedidos em aberto dos alunos das suas turmas.
+
+    Usa `alunos_visiveis` (nao `alunos_do_professor` puro) para aplicar o
+    consentimento de compartilhamento com a escola — sem isso, um aluno cujo
+    responsavel revogou o compartilhamento continuava aparecendo aqui com
+    nome, mesmo estando fora da visao do professor em todo o resto do
+    sistema.
+    """
     try:
-        alunos_ids = alunos_do_professor(current_user)
+        alunos_ids = alunos_visiveis(current_user)
         if not alunos_ids:
             return sucesso(data=[])
 

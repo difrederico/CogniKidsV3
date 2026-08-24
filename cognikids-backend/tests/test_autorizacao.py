@@ -61,9 +61,9 @@ class TestIsolamentoEntreProfessores:
 
     def test_nao_le_kit_de_apoio_de_aluno_alheio(self, outro_professor, turma,
                                                  estudante, db):
-        """O kit reune os dados clinicos mais sensiveis do aluno."""
+        """O kit reune os dados mais sensiveis do aluno."""
         db.support_kits.insert_one({
-            'aluno_id': estudante.oid, 'neurodivergencia': 'TEA nivel 1',
+            'aluno_id': estudante.oid, 'sensibilidades': ['ruido alto'],
             'estrategias_calmantes': 'ambiente silencioso',
         })
         r = outro_professor.get(f'/api/support-kit/{estudante.id}')
@@ -96,7 +96,7 @@ class TestIsolamentoEntreResponsaveis:
 
     def test_responsavel_nao_edita_kit_de_aluno_alheio(self, responsavel, estudante):
         r = responsavel.put(f'/api/support-kit/{estudante.id}',
-                            json={'neurodivergencia': 'invasao'})
+                            json={'estrategias_calmantes': 'invasao'})
         assert r.status_code == 403
 
     def test_responsavel_vinculado_acessa_o_filho(self, vinculo_responsavel, estudante):

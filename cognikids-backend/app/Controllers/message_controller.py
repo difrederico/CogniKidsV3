@@ -9,7 +9,7 @@ from flask import Blueprint, request
 
 from app.Models.message_model import Message
 from app.Models.user_model import User
-from app.Utils.authz import to_object_id
+from app.Utils.authz import pode_enviar_mensagem, to_object_id
 from app.Utils.decorators import token_required
 from app.Utils.responses import (
     dados_invalidos,
@@ -18,7 +18,7 @@ from app.Utils.responses import (
     nao_encontrado,
     sucesso,
 )
-from app.Utils.roles import normalizar_tipo
+from app.Utils.roles import ADMIN, normalizar_tipo
 
 logger = logging.getLogger(__name__)
 
@@ -99,9 +99,17 @@ def send_message(current_user):
         if not destinatario:
             return nao_encontrado('Destinatario nao encontrado')
 
-        if normalizar_tipo(current_user.get('tipo')) == normalizar_tipo(destinatario.get('tipo')):
+        tipo_atual = normalizar_tipo(current_user.get('tipo'))
+        tipo_destinatario = normalizar_tipo(destinatario.get('tipo'))
+
+        if tipo_atual == tipo_destinatario:
             return nao_autorizado(
                 'So e permitido enviar mensagens para perfis diferentes'
+            )
+
+        if ADMIN not in (tipo_atual, tipo_destinatario) and not pode_enviar_mensagem(current_user, destinatario):
+            return nao_autorizado(
+                'Voce so pode enviar mensagens para quem tem vinculo pedagogico ou familiar comprovado'
             )
 
         resultado = message_model.create_message(

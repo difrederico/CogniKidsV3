@@ -31,6 +31,15 @@ _CANONICO = {
 
 TIPOS_PERMITIDOS = [ESTUDANTE, PROFESSOR, RESPONSAVEL, ADMIN]
 
+# Perfis que alguem pode criar para si mesmo em POST /api/register, que e
+# uma rota publica (sem token). ADMIN fica deliberadamente de fora: e' um
+# perfil que ignora consentimento em pode_ver_aluno/alunos_visiveis
+# (authz.py), entao aceita-lo do corpo de uma requisicao anonima permitia
+# que qualquer pessoa na internet lesse biometria, alertas e perfil
+# funcional de todas as criancas da base. Admin agora so nasce pelo script
+# scripts/criar_admin.py, que exige acesso ao servidor.
+TIPOS_AUTOREGISTRAVEIS = [ESTUDANTE, PROFESSOR, RESPONSAVEL]
+
 # Mapeamento para o front-end (mantido por compatibilidade com o dashboard)
 ROLE_FRONTEND = {
     PROFESSOR: 'teacher',

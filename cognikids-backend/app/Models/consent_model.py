@@ -20,10 +20,13 @@ fica em 'consent_events'.
 """
 
 import datetime
+import logging
 
 from bson.objectid import ObjectId
 
 from app import mongo
+
+logger = logging.getLogger(__name__)
 
 # --------------------------------------------------------------------------
 # Finalidades
@@ -65,15 +68,46 @@ FINALIDADES = {
     USO_PESQUISA: {
         'titulo': 'Usar os dados em pesquisa',
         'descricao': (
-            'Dados sem identificacao podem ser usados em pesquisa academica '
-            'para melhorar o sistema. Voce pode recusar sem prejuizo algum.'
+            'Indisponivel no momento. O uso de dados em pesquisa com criancas '
+            'depende de aprovacao de um Comite de Etica em Pesquisa (CEP), que '
+            'ainda nao foi obtida. Nenhum dado do seu filho e usado em pesquisa '
+            'hoje.'
         ),
         'obrigatorio': False,
         'implica': [],
+        'disponivel': False,
     },
 }
 
+# Finalidades que o sistema ainda nao pode oferecer, e por que. Ficam visiveis
+# e desabilitadas em vez de sumirem da tela: some-las esconderia do responsavel
+# que a finalidade existiu, e quebraria a leitura dos consent_events ja
+# gravados.
+FINALIDADES_INDISPONIVEIS = {
+    fid for fid, meta in FINALIDADES.items() if not meta.get('disponivel', True)
+}
+
 VERSAO_TERMO = '1.0.0'
+
+
+def _eliminar_dado_biometrico(aluno_oid):
+    """Apaga o historico biometrico bruto do aluno (registros_iot + alerts).
+
+    Chamado quando COLETA_BIOMETRICA passa de concedido para revogado —
+    antes desta correcao, revogar so mudava a flag do consentimento; todo o
+    historico de BPM/GSR (dado sensivel de crianca, art. 11 da LGPD)
+    continuava gravado indefinidamente, sem nenhuma rotina de eliminacao.
+    Nao ha finalidade legitima remanescente para manter esse dado bruto uma
+    vez que a coleta deixou de ser autorizada — por isso eliminacao, nao so
+    anonimizacao.
+    """
+    resultado_registros = mongo.db.registros_iot.delete_many({'aluno_id': aluno_oid})
+    resultado_alertas = mongo.db.alerts.delete_many({'aluno_id': aluno_oid})
+    logger.info(
+        'Consentimento de coleta biometrica revogado para aluno %s: '
+        '%d registros_iot e %d alerts eliminados',
+        aluno_oid, resultado_registros.deleted_count, resultado_alertas.deleted_count,
+    )
 
 
 def _to_object_id(valor):
@@ -125,6 +159,25 @@ class Consent:
         for finalidade, concedido in (finalidades or {}).items():
             if finalidade not in FINALIDADES:
                 continue
+
+            # Finalidade indisponivel nunca pode ser concedida, venha o pedido
+            # de onde vier. 'uso_pesquisa' prometia ao responsavel "dados sem
+            # identificacao" e NADA no codigo desidentifica nada — a frase era
+            # falsa. Alem disso a constante nunca era lida por codigo de
+            # producao: quem marcava sim e quem marcava nao recebiam tratamento
+            # identico. Consentimento que nao altera o comportamento do sistema
+            # nao e consentimento. Pesquisa com menores exige ainda CEP/CONEP
+            # (Res. CNS 466/2012 e 510/2016), TCLE do responsavel e TALE da
+            # propria crianca — nada disso existe hoje.
+            if finalidade in FINALIDADES_INDISPONIVEIS:
+                if concedido:
+                    avisos.append(
+                        f"'{FINALIDADES[finalidade]['titulo']}' esta indisponivel "
+                        'e nao foi ativado.'
+                    )
+                novo[finalidade] = False
+                continue
+
             novo[finalidade] = bool(concedido)
 
         # Dependencias: negar uma finalidade derruba as que dependem dela.
@@ -171,6 +224,16 @@ class Consent:
                 'ip': ip,
             })
 
+        # Efeito real da revogacao sobre o dado ja coletado — nao so sobre
+        # a visibilidade futura. COMPARTILHAR_ESCOLA fica de fora de
+        # proposito: revogar o compartilhamento com a escola nao significa
+        # que o dado deixou de ter finalidade legitima (o app/responsavel
+        # continua usando), so que o professor deixa de ve-lo — isso ja e
+        # aplicado via `alunos_visiveis`/`filtrar_por_consentimento`.
+        mudanca_biometria = mudancas.get(COLETA_BIOMETRICA)
+        if mudanca_biometria and mudanca_biometria['de'] and not mudanca_biometria['para']:
+            _eliminar_dado_biometrico(aluno_oid)
+
         return novo, avisos
 
     def revogar_tudo(self, aluno_id, autor_id, ip=None):
@@ -202,6 +265,8 @@ class Consent:
                     'descricao': meta['descricao'],
                     'obrigatorio': meta['obrigatorio'],
                     'depende_de': meta['implica'],
+                    # A UI mostra a finalidade desabilitada, nao a esconde.
+                    'disponivel': meta.get('disponivel', True),
                 }
                 for fid, meta in FINALIDADES.items()
             ],

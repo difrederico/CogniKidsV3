@@ -18,6 +18,7 @@ from app.Utils.accessibility import (
     AJUSTAVEIS_PELA_CRIANCA,
     dimensoes_atendidas,
     resolver_tokens,
+    respostas_sem_efeito,
 )
 
 
@@ -104,6 +105,9 @@ class AccessibilityProfile:
             'ajustes_crianca': perfil.get('ajustes_crianca', {}),
             'tokens': resolver_tokens(respostas, perfil.get('ajustes_crianca', {})),
             'dimensoes': dimensoes_atendidas(respostas),
+            # O que o responsavel respondeu e nao produziu efeito. Sem isso a
+            # UI nao tem como mostrar a divergencia entre declarado e aplicado.
+            'respostas_sem_efeito': respostas_sem_efeito(respostas),
             'ajustaveis_pela_crianca': list(AJUSTAVEIS_PELA_CRIANCA),
             'atualizado_em': atualizado.isoformat() if atualizado else None,
         }
