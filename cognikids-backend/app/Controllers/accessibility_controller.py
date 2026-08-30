@@ -103,6 +103,25 @@ def get_profile(current_user, aluno_id):
         return erro_interno(e, 'ao consultar perfil de acessibilidade')
 
 
+@accessibility_blueprint.route('/<string:aluno_id>/history', methods=['GET'])
+@token_required
+def get_history(current_user, aluno_id):
+    """Rastro de auditoria: quem mudou o que e quando no perfil de acessibilidade."""
+    try:
+        aluno_oid = to_object_id(aluno_id)
+        if aluno_oid is None:
+            return dados_invalidos('ID do aluno invalido')
+
+        if not pode_ver_aluno(current_user, aluno_oid):
+            return nao_autorizado('Acesso nao autorizado aos dados deste aluno')
+
+        eventos = profile_model.historico(aluno_oid)
+        return sucesso(data=[AccessibilityProfile.serializar_evento(e) for e in eventos])
+
+    except Exception as e:
+        return erro_interno(e, 'ao consultar historico do perfil de acessibilidade')
+
+
 @accessibility_blueprint.route('/<string:aluno_id>', methods=['PUT'])
 @token_required
 @responsavel_required

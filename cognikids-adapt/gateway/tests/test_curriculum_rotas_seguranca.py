@@ -18,6 +18,7 @@ JOB = {
     "status": "queued",
     "teacher_id": "prof-dono",
     "student_ids": ["aluno-a"],
+    "habilidade_bncc": "EF03CI04",
     "adaptations": [],
 }
 
@@ -82,6 +83,7 @@ def _corpo_adapt(student_ids):
         "subject": "Matemática",
         "original_content": "Divida a pizza em partes iguais.",
         "student_ids": student_ids,
+        "habilidade_bncc": "EF03MA07",
     }
 
 
@@ -130,3 +132,142 @@ def test_adapt_aceita_alunos_da_propria_turma(cliente, monkeypatch):
     resposta = cliente.post("/v1/curriculum/adapt", json=_corpo_adapt(["aluno-a", "aluno-b"]))
     assert resposta.status_code == 202, resposta.text
     assert resposta.json()["job_id"] == "job-novo"
+
+
+# --------------------------------------------------------------------------
+# Registro de aprovacao do professor — PUT .../adaptations/{id}/approve
+#
+# Ate esta rota existir, o principio "o professor revisa e aprova cada
+# versao" (CLAUDE.md) nao tinha nenhum registro em codigo (ADR-011).
+# --------------------------------------------------------------------------
+
+def _job_com_adaptacao():
+    return {
+        "job_id": "job-2",
+        "status": "completed",
+        "teacher_id": "prof-dono",
+        "student_ids": ["aluno-a"],
+        "habilidade_bncc": "EF03LP01",
+        "adaptations": [
+            {
+                "adaptation_id": "adapt-1",
+                "student_id": "aluno-a",
+                "adapted_content": "Versao adaptada",
+                "format_applied": ["texto_simplificado"],
+                "xai_explanation": "Simplificado por baixa densidade de leitura",
+                "profile_tokens_used": {"densidade": "minima"},
+                "habilidade_bncc": "EF03LP01",
+                "approved": False,
+                "approved_by": None,
+                "approved_at": None,
+            }
+        ],
+    }
+
+
+class _ColecaoAprovacaoFalsa:
+    """Fake minimo que reproduz so a semantica de update_one com
+    array_filters usada por curriculum_service.aprovar_adaptacao — nao e um
+    mock generico de Mongo.
+    """
+
+    def __init__(self, documento):
+        self._doc = documento
+
+    async def find_one(self, filtro, projecao=None):
+        if filtro.get("job_id") == self._doc["job_id"]:
+            return dict(self._doc)
+        return None
+
+    async def update_one(self, filtro, update, array_filters=None):
+        from types import SimpleNamespace
+
+        if filtro.get("job_id") != self._doc["job_id"]:
+            return SimpleNamespace(matched_count=0, modified_count=0)
+
+        alvo_id = filtro.get("adaptations.adaptation_id")
+        alvo = next(
+            (a for a in self._doc["adaptations"] if a["adaptation_id"] == alvo_id), None
+        )
+        if alvo is None:
+            return SimpleNamespace(matched_count=0, modified_count=0)
+        if alvo["approved"] is True:
+            return SimpleNamespace(matched_count=1, modified_count=0)
+
+        sets = update["$set"]
+        alvo["approved"] = True
+        alvo["approved_by"] = sets["adaptations.$[elem].approved_by"]
+        alvo["approved_at"] = sets["adaptations.$[elem].approved_at"]
+        return SimpleNamespace(matched_count=1, modified_count=1)
+
+
+@pytest.fixture
+def cliente_aprovacao():
+    colecao = _ColecaoAprovacaoFalsa(_job_com_adaptacao())
+
+    class _DbAprovacaoFalso:
+        def __getitem__(self, _nome):
+            return colecao
+
+    app.dependency_overrides[get_db] = lambda: _DbAprovacaoFalso()
+    yield TestClient(app), colecao
+    app.dependency_overrides.clear()
+
+
+def test_professor_dono_aprova_adaptacao(cliente_aprovacao):
+    cliente, _ = cliente_aprovacao
+    _autenticar_como("prof-dono", "professor")
+
+    resposta = cliente.put("/v1/curriculum/jobs/job-2/adaptations/adapt-1/approve")
+
+    assert resposta.status_code == 200, resposta.text
+    adaptacao = resposta.json()["adaptations"][0]
+    assert adaptacao["approved"] is True
+    assert adaptacao["approved_by"] == "prof-dono"
+    assert adaptacao["approved_at"] is not None
+
+
+def test_aprovar_e_idempotente(cliente_aprovacao):
+    """Aprovar duas vezes nao troca o approved_by nem falha na segunda vez."""
+    cliente, _ = cliente_aprovacao
+    _autenticar_como("prof-dono", "professor")
+
+    cliente.put("/v1/curriculum/jobs/job-2/adaptations/adapt-1/approve")
+    primeira = cliente.put(
+        "/v1/curriculum/jobs/job-2/adaptations/adapt-1/approve"
+    ).json()["adaptations"][0]["approved_at"]
+
+    resposta = cliente.put("/v1/curriculum/jobs/job-2/adaptations/adapt-1/approve")
+    assert resposta.status_code == 200
+    assert resposta.json()["adaptations"][0]["approved_at"] == primeira
+
+
+def test_professor_alheio_nao_aprova_adaptacao(cliente_aprovacao):
+    """Nao e so uma questao de papel — precisa ser o dono do job."""
+    cliente, _ = cliente_aprovacao
+    _autenticar_como("prof-alheio", "professor")
+
+    resposta = cliente.put("/v1/curriculum/jobs/job-2/adaptations/adapt-1/approve")
+
+    assert resposta.status_code == 404, (
+        "REGRESSAO CRITICA: professor sem vinculo com o job conseguiu aprovar adaptacao"
+    )
+
+
+def test_aprovar_adaptation_id_inexistente(cliente_aprovacao):
+    cliente, _ = cliente_aprovacao
+    _autenticar_como("prof-dono", "professor")
+
+    resposta = cliente.put("/v1/curriculum/jobs/job-2/adaptations/nao-existe/approve")
+
+    assert resposta.status_code == 404
+    assert "adaptation_id" in resposta.json()["detail"]
+
+
+def test_aprovar_job_inexistente(cliente_aprovacao):
+    cliente, _ = cliente_aprovacao
+    _autenticar_como("prof-dono", "professor")
+
+    resposta = cliente.put("/v1/curriculum/jobs/job-inexistente/adaptations/adapt-1/approve")
+
+    assert resposta.status_code == 404

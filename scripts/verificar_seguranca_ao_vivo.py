@@ -25,6 +25,7 @@ import uuid
 
 import requests
 from pymongo import MongoClient
+from pymongo.errors import OperationFailure
 
 CORE = "http://localhost:5001"
 GATEWAY = "http://localhost:8001"
@@ -171,6 +172,41 @@ for nome, porta in (("console RabbitMQ", 15672), ("AMQP RabbitMQ", 5672), ("Mong
     pela_rede = porta_em(ip_lan, porta)
     checar(f"{nome} ({porta}) NAO alcancavel pela rede", not pela_rede,
            f"loopback={pelo_loopback} rede={pela_rede}")
+
+print()
+print("=" * 70)
+print("ATAQUE 5 — Mongo satelite sem autenticacao real (ADR-010)")
+print("=" * 70)
+
+# So o loopback nao basta: qualquer processo na mesma maquina (ou alguem que
+# chegue ao loopback via tunel SSH, port-forward, ou um container vizinho
+# comprometido) alcanca esta porta. MONGO_INITDB_ROOT_USERNAME so tem efeito
+# em volume VAZIO — com mongo-adapt-data ja populado ela e' ignorada em
+# silencio e o banco fica rodando sem auth "parecendo" protegido. Este
+# ataque conecta SEM credenciais e tenta uma operacao que so teria sucesso
+# se a autenticacao NAO estiver sendo exigida de verdade.
+cli_sem_auth = None
+try:
+    cli_sem_auth = MongoClient(
+        "mongodb://localhost:27018/", serverSelectionTimeoutMS=3000
+    )
+    nomes_bancos = cli_sem_auth.list_database_names()
+    checar(
+        "Mongo satelite exige autenticacao (conexao sem credenciais deveria falhar)",
+        False,
+        f"conectou sem credenciais e listou bancos: {nomes_bancos}",
+    )
+except OperationFailure:
+    # E exatamente o esperado: sem credenciais, o comando e' recusado.
+    checar("Mongo satelite exige autenticacao", True)
+except Exception as e:
+    # Erro de conexao (Mongo fora do ar, porta fechada) nao prova que a
+    # autenticacao existe — nao afirmar seguranca por um motivo errado.
+    checar("Mongo satelite exige autenticacao", False,
+           f"nao foi possivel verificar (Mongo acessivel?): {e}")
+finally:
+    if cli_sem_auth is not None:
+        cli_sem_auth.close()
 
 print()
 print("=" * 70)

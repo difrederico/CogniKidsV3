@@ -75,6 +75,62 @@ def test_registro_publico_aceita_perfis_legitimos(client):
         )
 
 
+# --------------------------------------------------------------------------
+# link-child sem confirmacao de terceiro (ADR-010)
+# --------------------------------------------------------------------------
+
+def test_desconhecido_nao_ganha_acesso_so_vinculando(client, estudante):
+    """Antes desta correcao, era exatamente isto: cadastro publico como
+    'pai' + e-mail do aluno = acesso imediato a biometria e alertas dela.
+    """
+    client.post('/api/register', json={
+        'nome': 'Estranho', 'email': 'estranho@exemplo.test',
+        'senha': 'senha123', 'tipo': 'pai',
+    })
+    login = client.post('/api/login', json={
+        'email': 'estranho@exemplo.test', 'senha': 'senha123',
+    })
+    token = login.get_json()['token']
+    headers = {'Authorization': f'Bearer {token}'}
+
+    pedido = client.post('/api/parents/link-child', headers=headers,
+                         json={'child_email': estudante.email})
+    assert pedido.status_code == 202, (
+        'REGRESSAO CRITICA: link-child voltou a vincular sem confirmacao'
+    )
+
+    filhos = client.get('/api/parents/children', headers=headers)
+    assert filhos.get_json()['total'] == 0, (
+        'REGRESSAO CRITICA: estranho ganhou acesso ao aluno sem confirmacao da escola'
+    )
+
+
+def test_professor_sem_a_turma_nao_confirma_vinculo_alheio(
+    outro_professor, professor, turma, responsavel, estudante
+):
+    """So um professor de UMA turma do aluno pode confirmar — nao qualquer professor."""
+    pedido = responsavel.post('/api/parents/link-child',
+                              json={'child_email': estudante.email})
+    vinculo_id = pedido.get_json()['vinculo_id']
+
+    resposta = outro_professor.put(f'/api/teachers/link-requests/{vinculo_id}/confirm')
+    assert resposta.status_code == 404, (
+        'REGRESSAO CRITICA: professor sem vinculo com a turma confirmou vinculo alheio'
+    )
+
+    assert responsavel.get('/api/parents/children').get_json()['total'] == 0
+
+
+def test_professor_sem_a_turma_nao_ve_pedido_na_fila(
+    outro_professor, professor, turma, responsavel, estudante
+):
+    responsavel.post('/api/parents/link-child', json={'child_email': estudante.email})
+
+    r = outro_professor.get('/api/teachers/link-requests/pending')
+    assert r.status_code == 200
+    assert r.get_json()['total'] == 0
+
+
 def test_admin_enxerga_aluno_sem_consentimento(app, estudante):
     """Documenta POR QUE admin nunca pode nascer de rota publica.
 

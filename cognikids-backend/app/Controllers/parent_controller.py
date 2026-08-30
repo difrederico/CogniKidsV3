@@ -16,6 +16,7 @@ from app.Models.class_model import Class
 from app.Models.feeling_model import Feeling
 from app.Models.goal_model import Goal
 from app.Models.user_model import User
+from app.Models.vinculo_model import CONFIRMADO, Vinculo
 from app.Utils.authz import filhos_do_responsavel, pode_ver_aluno, to_object_id
 from app.Utils.decorators import responsavel_required, token_required
 from app.Utils.responses import (
@@ -35,13 +36,22 @@ feeling_model = Feeling()
 alert_model = Alert()
 goal_model = Goal()
 class_model = Class()
+vinculo_model = Vinculo()
 
 
 @parent_blueprint.route('/link-child', methods=['POST'])
 @token_required
 @responsavel_required
 def link_child(current_user):
-    """Associa um filho ao responsavel pelo email do aluno."""
+    """Pede vinculo com um filho pelo email do aluno.
+
+    O vinculo nasce pendente — so passa a dar acesso aos dados do aluno
+    depois que um professor de uma turma dele confirmar em
+    PUT /api/teachers/link-requests/<id>/confirm. Antes desta correcao,
+    qualquer pessoa que se autorregistrasse como 'pai' (rota publica) e
+    soubesse o e-mail de um aluno ganhava acesso imediato a biometria,
+    alertas e perfil funcional dele (ADR-010).
+    """
     try:
         data = request.get_json(silent=True) or {}
         child_email = (data.get('child_email') or '').strip().lower()
@@ -53,15 +63,41 @@ def link_child(current_user):
         if not child or normalizar_tipo(child.get('tipo')) != ESTUDANTE:
             return nao_encontrado('Aluno nao encontrado com este email')
 
-        user_model.link_child_to_parent(current_user['_id'], child['_id'])
+        vinculo = vinculo_model.criar_pendente(current_user['_id'], child['_id'])
+
+        if vinculo['status'] == CONFIRMADO:
+            return sucesso(
+                message=f'Aluno {child["nome"]} ja esta vinculado a voce.',
+                child_id=str(child['_id']),
+                vinculo_status=CONFIRMADO,
+            )
 
         return sucesso(
-            message=f'Aluno {child["nome"]} associado com sucesso!',
+            message=(
+                f'Pedido de vinculo com {child["nome"]} enviado. Um professor '
+                'da turma precisa confirmar antes que voce tenha acesso aos dados dele.'
+            ),
+            status_code=202,
             child_id=str(child['_id']),
+            vinculo_id=str(vinculo['_id']),
+            vinculo_status=vinculo['status'],
         )
 
     except Exception as e:
-        return erro_interno(e, 'ao associar filho')
+        return erro_interno(e, 'ao pedir vinculo com o filho')
+
+
+@parent_blueprint.route('/link-requests', methods=['GET'])
+@token_required
+@responsavel_required
+def get_link_requests(current_user):
+    """Pedidos de vinculo do proprio responsavel, com status."""
+    try:
+        pedidos = vinculo_model.pedidos_do_responsavel(current_user['_id'])
+        return sucesso(data=[Vinculo.serializar(p) for p in pedidos], total=len(pedidos))
+
+    except Exception as e:
+        return erro_interno(e, 'ao buscar pedidos de vinculo')
 
 
 @parent_blueprint.route('/unlink-child/<string:child_id>', methods=['DELETE'])

@@ -18,6 +18,7 @@ from app.Models.class_model import Class
 from app.Models.feeling_model import Feeling
 from app.Models.grade_model import Grade
 from app.Models.user_model import User
+from app.Models.vinculo_model import Vinculo
 from app.Utils.authz import (
     alunos_do_professor,
     alunos_visiveis,
@@ -44,6 +45,7 @@ user_model = User()
 class_model = Class()
 alert_model = Alert()
 grade_model = Grade()
+vinculo_model = Vinculo()
 
 
 def _serializar_aluno(aluno):
@@ -190,6 +192,10 @@ def get_crisis_alerts(current_user):
                 'timestamp': serializado['data_hora'],
                 'motivo': serializado['motivo'],
                 'resolvido': serializado['resolvido'],
+                # ADR-010: severidade ainda nao validada clinicamente — o
+                # professor precisa ver isso na propria tela de alerta de
+                # crise, nao so num comentario de arquitetura.
+                'modelo_validado': serializado['modelo_validado'],
             }
 
         return sucesso(data=list(por_aluno.values()))
@@ -319,3 +325,87 @@ def get_dashboard(current_user):
 
     except Exception as e:
         return erro_interno(e, 'ao montar dashboard do professor')
+
+
+@teacher_blueprint.route('/link-requests/pending', methods=['GET'])
+@token_required
+@professor_required
+def get_pending_link_requests(current_user):
+    """Pedidos de vinculo responsavel-filho pendentes, para alunos das
+    turmas do professor — a fila que o professor confirma ou recusa.
+    """
+    try:
+        alunos_ids = alunos_do_professor(current_user)
+        pendentes = vinculo_model.pendentes_para_alunos(alunos_ids)
+        if not pendentes:
+            return sucesso(data=[], total=0)
+
+        alunos_por_id = {
+            a['_id']: a.get('nome', 'Desconhecido')
+            for a in user_model.find_students_by_ids({v['aluno_id'] for v in pendentes})
+        }
+        responsaveis_por_id = {
+            u['_id']: {'nome': u.get('nome'), 'email': u.get('email')}
+            for u in mongo.db.users.find(
+                {'_id': {'$in': list({v['responsavel_id'] for v in pendentes})}},
+                {'nome': 1, 'email': 1},
+            )
+        }
+
+        dados = []
+        for vinculo in pendentes:
+            serializado = Vinculo.serializar(vinculo)
+            serializado['aluno_nome'] = alunos_por_id.get(vinculo['aluno_id'], 'Desconhecido')
+            responsavel_info = responsaveis_por_id.get(vinculo['responsavel_id'], {})
+            serializado['responsavel_nome'] = responsavel_info.get('nome')
+            serializado['responsavel_email'] = responsavel_info.get('email')
+            dados.append(serializado)
+
+        return sucesso(data=dados, total=len(dados))
+
+    except Exception as e:
+        return erro_interno(e, 'ao buscar pedidos de vinculo pendentes')
+
+
+def _decidir_vinculo(current_user, vinculo_id, aprovar):
+    vinculo = vinculo_model.obter(vinculo_id)
+    if vinculo is None:
+        return nao_encontrado('Pedido de vinculo nao encontrado')
+
+    # 404, nao 403: professor sem turma com este aluno nao deve nem
+    # confirmar que o pedido existe — mesma filosofia das outras correcoes
+    # de IDOR do projeto.
+    if vinculo['aluno_id'] not in alunos_do_professor(current_user):
+        return nao_encontrado('Pedido de vinculo nao encontrado')
+
+    resultado = vinculo_model.decidir(vinculo_id, current_user['_id'], aprovar)
+    if resultado.matched_count == 0:
+        return dados_invalidos('Este pedido de vinculo ja foi decidido')
+
+    if aprovar:
+        user_model.link_child_to_parent(vinculo['responsavel_id'], vinculo['aluno_id'])
+        return sucesso(message='Vinculo confirmado. O responsavel agora tem acesso aos dados do aluno.')
+
+    return sucesso(message='Pedido de vinculo recusado.')
+
+
+@teacher_blueprint.route('/link-requests/<string:vinculo_id>/confirm', methods=['PUT'])
+@token_required
+@professor_required
+def confirm_link_request(current_user, vinculo_id):
+    """Confirma que o responsavel realmente e responsavel por este aluno."""
+    try:
+        return _decidir_vinculo(current_user, vinculo_id, aprovar=True)
+    except Exception as e:
+        return erro_interno(e, 'ao confirmar vinculo')
+
+
+@teacher_blueprint.route('/link-requests/<string:vinculo_id>/reject', methods=['PUT'])
+@token_required
+@professor_required
+def reject_link_request(current_user, vinculo_id):
+    """Recusa um pedido de vinculo — o responsavel nao ganha acesso algum."""
+    try:
+        return _decidir_vinculo(current_user, vinculo_id, aprovar=False)
+    except Exception as e:
+        return erro_interno(e, 'ao recusar vinculo')

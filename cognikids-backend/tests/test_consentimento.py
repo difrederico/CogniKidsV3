@@ -137,6 +137,48 @@ class TestRevogacao:
         assert db.alerts.count_documents({'aluno_id': estudante.oid}) == 0
         assert db.registros_iot.count_documents({'aluno_id': estudante.oid}) == 0
 
+    def test_revogacao_notifica_o_satelite(self, vinculo_responsavel, estudante, monkeypatch):
+        """Cascata core->satelite (ADR-008/ADR-010): apagar so no core deixa
+        rastro equivalente (student_graphs/telemetry_events) vivo no satelite.
+        """
+        chamadas = []
+        monkeypatch.setattr(
+            'app.Utils.satellite_client.notificar_revogacao_biometrica',
+            lambda aluno_id: chamadas.append(aluno_id),
+        )
+
+        vinculo_responsavel.put(f'/api/consent/{estudante.id}', json={
+            'finalidades': {'uso_app': True, 'coleta_biometrica': True},
+        })
+        vinculo_responsavel.delete(f'/api/consent/{estudante.id}')
+
+        assert chamadas == [str(estudante.oid)]
+
+    def test_revogacao_nao_falha_se_satelite_estiver_fora_do_ar(
+        self, vinculo_responsavel, estudante, monkeypatch, db
+    ):
+        """CLAUDE.md secao 2: o core continua funcionando sem o satelite —
+        a cascata e' best-effort, nunca pode quebrar a revogacao no core.
+        """
+        def _fora_do_ar(aluno_id):
+            raise ConnectionError('satelite fora do ar (simulado)')
+
+        monkeypatch.setattr(
+            'app.Utils.satellite_client.notificar_revogacao_biometrica', _fora_do_ar
+        )
+
+        vinculo_responsavel.put(f'/api/consent/{estudante.id}', json={
+            'finalidades': {'uso_app': True, 'coleta_biometrica': True},
+        })
+        db.registros_iot.insert_one({'aluno_id': estudante.oid, 'dados_biometricos': {'bpm': 100}})
+
+        r = vinculo_responsavel.delete(f'/api/consent/{estudante.id}')
+
+        assert r.status_code == 200, (
+            'REGRESSAO CRITICA: satelite fora do ar quebrou a revogacao no core'
+        )
+        assert db.registros_iot.count_documents({'aluno_id': estudante.oid}) == 0
+
     def test_revogar_compartilhamento_isolado_nao_apaga_biometria(
         self, vinculo_responsavel, estudante, db
     ):

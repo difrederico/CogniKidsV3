@@ -257,3 +257,60 @@ class TestInferenciaDoConsumidor:
         for dados in ({'bpm': 160, 'gsr': 1.0}, {'bpm': 90, 'gsr': 5.0},
                       {'bpm': 100, 'gsr': 2.0}):
             assert consumidor.classificar_severidade(dados) == da_api(dados)
+
+    def test_limiares_sao_os_mesmos_dos_dois_lados(self, consumidor):
+        """Os limiares tambem precisam ser o MESMO valor, nao so concordar
+        nos poucos casos testados acima — um `LIMIAR_BPM_ALTO` diferente em
+        cada arquivo passaria nos testes de caso e ainda assim divergiria
+        num valor de fronteira nao coberto.
+        """
+        from app.Models import alert_model
+
+        assert consumidor.LIMIAR_BPM_ALTO == alert_model.LIMIAR_BPM_ALTO
+        assert consumidor.LIMIAR_GSR_ALTO == alert_model.LIMIAR_GSR_ALTO
+
+
+class TestModeloRiscoNaoValidado:
+    """ADR-010: nenhum uso com crianca real ate o modelo ser validado.
+
+    modelo_validado grava esse estado em CADA alerta, em vez de deixar so
+    documentado em comentario — para a UI poder avisar quem le.
+    """
+
+    def test_create_alert_grava_modelo_validado_false_por_padrao(self, app, estudante, db):
+        from app.Models.alert_model import Alert
+
+        Alert().create_alert({
+            'aluno_id': str(estudante.oid),
+            'dados_biometricos': {'bpm': 160, 'gsr': 1.0},
+        })
+
+        assert db.alerts.find_one({'aluno_id': estudante.oid})['modelo_validado'] is False
+
+    def test_serializar_e_seguro_para_alerta_antigo_sem_o_campo(self):
+        from app.Models.alert_model import Alert
+
+        alerta_antigo = {
+            'aluno_id': ObjectId(),
+            'dados_biometricos': {'bpm': 160},
+            'severity': 'high',
+            # sem 'modelo_validado' — formato anterior a esta correcao
+        }
+        assert Alert.serializar(alerta_antigo)['modelo_validado'] is False
+
+    def test_professor_ve_modelo_validado_no_alerta_de_crise(self, professor, turma, alerta):
+        r = professor.get('/api/teachers/crisis_alerts')
+        assert r.get_json()['data'][0]['modelo_validado'] is False
+
+    def test_consumidor_mantem_a_mesma_flag_do_modelo_de_alertas(self, consumidor):
+        from app.Models import alert_model
+
+        assert consumidor.MODELO_VALIDADO == alert_model.MODELO_VALIDADO
+
+    @pytest.fixture
+    def consumidor(self):
+        pytest.importorskip('pandas')
+        pytest.importorskip('joblib')
+        import alert_monitor
+
+        return alert_monitor

@@ -27,9 +27,12 @@ MONGO_URI = os.getenv('MONGO_URI', 'mongodb://db:27017/cognikidsDB')
 MODEL_PATH = os.getenv('MODEL_PATH', 'model.joblib')
 FILA = os.getenv('IOT_QUEUE', 'iot_queue')
 
-# Limiares de severidade (espelham app/Models/alert_model.py)
-LIMIAR_BPM_ALTO = 130
-LIMIAR_GSR_ALTO = 4.0
+# Limiares de severidade e flag de validacao — espelham app/Models/alert_model.py
+# de proposito (mesmo ambiente, mesmo valor). ADR-010: nenhum dos dois foi
+# validado clinicamente ainda; ver a nota longa em alert_model.py.
+LIMIAR_BPM_ALTO = float(os.getenv('LIMIAR_BPM_ALTO', 130))
+LIMIAR_GSR_ALTO = float(os.getenv('LIMIAR_GSR_ALTO', 4.0))
+MODELO_VALIDADO = os.getenv('MODELO_RISCO_VALIDADO', 'false').strip().lower() == 'true'
 
 # Recursos abertos em conectar(), nao no import: assim o modulo pode ser
 # importado por testes sem exigir Redis, Mongo e o modelo treinado no ar.
@@ -169,6 +172,7 @@ def processar_mensagem(raw_data):
                 'motivo': 'Predicao do Modelo de ML',
                 'ml_confidence': confianca,
                 'resolvido': False,
+                'modelo_validado': MODELO_VALIDADO,
             })
         else:
             print(f"[OK] Dados normais - Aluno: {aluno_oid}, BPM: {dados_bio['bpm']}")

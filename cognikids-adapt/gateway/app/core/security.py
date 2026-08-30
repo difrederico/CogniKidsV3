@@ -52,3 +52,29 @@ def professor_autenticado(authorization: str | None = Header(default=None)) -> d
             detail="Apenas professores podem criar atividades adaptadas",
         )
     return usuario
+
+
+def servico_core_autenticado(authorization: str | None = Header(default=None)) -> dict:
+    """Valida que a chamada vem do próprio core, não de um usuário humano.
+
+    Usado em rotas de efeito administrativo entre serviços (hoje só a
+    cascata de revogação de consentimento, ADR-008/ADR-010) — não reaproveita
+    usuario_autenticado de propósito: um JWT de usuário válido (professor,
+    aluno, responsável) NÃO deve conseguir chamar estas rotas. O core emite
+    este token especificamente com o claim 'servico' (ver
+    Utils/satellite_client.py no core), nunca com user_id/role de humano.
+    """
+    token = _extrair_token(authorization)
+    try:
+        payload = jwt.decode(token, settings.core_jwt_secret, algorithms=["HS256"])
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expirado")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token inválido")
+
+    if payload.get("servico") != "core":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Esta rota só aceita chamadas de serviço do core",
+        )
+    return payload

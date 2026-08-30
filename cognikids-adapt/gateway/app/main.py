@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api.v1 import curriculum, telemetry
+from app.api.v1 import curriculum, students, telemetry
 from app.clients import rabbitmq
 from app.db import mongo
 
@@ -21,6 +21,7 @@ app = FastAPI(title="CogniKids Adapt Gateway", lifespan=lifespan)
 
 app.include_router(curriculum.router)
 app.include_router(telemetry.router)
+app.include_router(students.router)
 
 
 @app.get("/health")

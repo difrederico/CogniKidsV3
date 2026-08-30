@@ -100,6 +100,12 @@ def _eliminar_dado_biometrico(aluno_oid):
     Nao ha finalidade legitima remanescente para manter esse dado bruto uma
     vez que a coleta deixou de ser autorizada — por isso eliminacao, nao so
     anonimizacao.
+
+    So cobre o banco do CORE. O satelite deriva do mesmo dado comportamental
+    o proprio grafo de conhecimento (student_graphs) e a telemetria bruta
+    (telemetry_events) — ver _notificar_satelite_da_revogacao logo abaixo,
+    que fecha essa lacuna (documentada como aberta na ADR-008/ADR-010) numa
+    chamada best-effort separada, para nao acoplar o core ao satelite.
     """
     resultado_registros = mongo.db.registros_iot.delete_many({'aluno_id': aluno_oid})
     resultado_alertas = mongo.db.alerts.delete_many({'aluno_id': aluno_oid})
@@ -108,6 +114,27 @@ def _eliminar_dado_biometrico(aluno_oid):
         '%d registros_iot e %d alerts eliminados',
         aluno_oid, resultado_registros.deleted_count, resultado_alertas.deleted_count,
     )
+    _notificar_satelite_da_revogacao(aluno_oid)
+
+
+def _notificar_satelite_da_revogacao(aluno_oid):
+    """Cascata core->satelite (ADR-008/ADR-010): pede ao satelite para
+    apagar student_graphs/telemetry_events deste aluno.
+
+    Best-effort de proposito — nunca pode impedir nem reverter a eliminacao
+    ja feita no core, mesmo que o satelite esteja fora do ar (CLAUDE.md
+    secao 2: o core continua funcionando sem o satelite). Import local
+    evita qualquer acoplamento de import-time entre os dois servicos.
+    """
+    from app.Utils.satellite_client import notificar_revogacao_biometrica
+
+    try:
+        notificar_revogacao_biometrica(str(aluno_oid))
+    except Exception as e:
+        # notificar_revogacao_biometrica ja trata as proprias falhas de
+        # rede internamente — este except e' so uma segunda rede de
+        # seguranca para nunca deixar a cascata quebrar a revogacao no core.
+        logger.warning('Falha inesperada ao notificar o satelite: %s', e)
 
 
 def _to_object_id(valor):

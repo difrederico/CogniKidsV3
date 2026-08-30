@@ -99,9 +99,27 @@ services:
       # ATENCAO: nao adianta so acrescentar MONGO_INITDB_ROOT_USERNAME aqui.
       # Essa variavel so tem efeito quando o volume esta VAZIO; com o volume
       # mongo-adapt-data ja populado, ela e' ignorada em silencio e o banco
-      # segue sem auth parecendo protegido. Habilitar auth de verdade exige
-      # criar o usuario a mao (db.createUser) ou recriar o volume — ver
-      # ADR-010 no CLAUDE.md. Ate la, o loopback e' a protecao real.
+      # segue sem auth parecendo protegido. Ate la, o loopback e' a protecao
+      # real, e scripts/verificar_seguranca_ao_vivo.py (Ataque 5) detecta e
+      # falha o build se essa falta de auth voltar a passar despercebida.
+      #
+      # Para habilitar auth de verdade, dois caminhos:
+      #   (a) Recriar o volume do zero (perde os dados atuais do satelite):
+      #         docker compose down
+      #         docker volume rm cognikids-adapt_mongo-adapt-data
+      #         # definir MONGO_INITDB_ROOT_USERNAME/PASSWORD no .env
+      #         docker compose up -d
+      #   (b) Criar o usuario no volume ja populado, sem perder dados:
+      #         docker compose exec mongo-adapt mongosh --eval '
+      #           db.getSiblingDB("admin").createUser({
+      #             user: "<definir>", pwd: "<definir>",
+      #             roles: [{role: "root", db: "admin"}]
+      #           })'
+      #         # depois, reiniciar mongo-adapt com "command: [--auth]" (ou
+      #         # setar MONGO_INITDB_ROOT_USERNAME so' para validar — ela
+      #         # nao recria o usuario, mas "--auth" passa a exigi-lo) e
+      #         # atualizar SATELLITE_MONGO_URI com usuario:senha@ nos tres
+      #         # servicos (gateway, worker-ingestion, worker-profile).
       - "127.0.0.1:27018:27017"
     volumes:
       - mongo-adapt-data:/data/db

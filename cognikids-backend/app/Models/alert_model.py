@@ -14,22 +14,46 @@ Campos canonicos de um alerta:
     severity            'medium' | 'high'
     motivo              str
     resolvido           bool
+    modelo_validado     bool — ver nota abaixo
 
 Antes desta padronizacao o alert_monitor gravava 'aluno_id' enquanto o
 dashboard consultava 'student_id', e os dados brutos iam para 'iot_raw_data'
 enquanto a API lia 'registros_iot'. O resultado era que nenhum alerta
 detectado pelo modelo chegava ao professor.
+
+ADR-010 — 'modelo_validado' (guarda-corpo, nao correcao do modelo):
+scripts/utils/train_model.py treina com dado SINTETICO (ruido de 25%, 8% dos
+rotulos invertidos de proposito) e LIMIAR_BPM_ALTO=130 marca severidade
+maxima — 130 bpm e uma crianca de 7 anos no recreio, nao necessariamente uma
+crise. Nao ha, hoje, validacao clinica de nenhum dos dois. Nao inventamos um
+novo limiar aqui (decisao clinica que nao cabe a este time) — em vez disso,
+os limiares viram configuraveis por ambiente (ajustaveis sem deploy assim
+que houver validacao real) e MODELO_VALIDADO fica False de proposito,
+gravado em CADA alerta. Isso transforma o aviso da ADR de comentario que
+ninguem le as 2h da manha em campo visivel no proprio alerta, que a UI pode
+usar para avisar quem le que a severidade ainda nao e' clinicamente
+confiavel. Mesmos limiares e mesma flag espelhados em alert_monitor.py —
+ver test_severidade_coincide_com_a_do_modelo_de_alertas, que existe
+justamente para pegar essa duplicacao saindo de sincronia.
 """
 
 import datetime
+import os
 
 from bson.objectid import ObjectId
 
 from app import mongo
 
-# Limiares clinicos usados para classificar a severidade do alerta
-LIMIAR_BPM_ALTO = 130
-LIMIAR_GSR_ALTO = 4.0
+# Limiares clinicos usados para classificar a severidade do alerta —
+# configuraveis por ambiente, nao hardcoded, para permitir ajuste sem
+# deploy assim que houver validacao clinica real.
+LIMIAR_BPM_ALTO = float(os.environ.get('LIMIAR_BPM_ALTO', 130))
+LIMIAR_GSR_ALTO = float(os.environ.get('LIMIAR_GSR_ALTO', 4.0))
+
+# Continua False ate alguem validar o modelo/limiares com dado real e
+# mudar isto conscientemente — nunca inferir "validado" de nenhuma outra
+# condicao (ex.: limiar customizado != limiar validado).
+MODELO_VALIDADO = os.environ.get('MODELO_RISCO_VALIDADO', 'false').strip().lower() == 'true'
 
 
 def _to_object_id(valor):
@@ -83,6 +107,7 @@ class Alert:
             'motivo': alert_data.get('motivo', 'Predicao do Modelo de ML'),
             'ml_confidence': alert_data.get('ml_confidence'),
             'resolvido': False,
+            'modelo_validado': MODELO_VALIDADO,
         }
         return mongo.db.alerts.insert_one(documento)
 
@@ -148,6 +173,9 @@ class Alert:
             'motivo': alerta.get('motivo', ''),
             'resolvido': alerta.get('resolvido', False),
             'ml_confidence': alerta.get('ml_confidence'),
+            # False tambem para alertas antigos, gravados antes deste campo
+            # existir — o default seguro e' "nao confiar", nao "assumir ok".
+            'modelo_validado': alerta.get('modelo_validado', False),
         }
 
 

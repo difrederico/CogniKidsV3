@@ -9,6 +9,14 @@ services:
       - .:/app
     env_file:
       - .env
+    environment:
+      # Core e satelite sobem como dois `docker compose` separados (mesmo
+      # motivo do CORE_BASE_URL no compose do satelite) — dentro do
+      # container, "localhost" e' o proprio container, nao o host. So usada
+      # pela cascata de revogacao (Utils/satellite_client.py, ADR-008/
+      # ADR-010); se o satelite nao estiver rodando, a chamada falha rapido
+      # e so' gera um aviso em log — o core nao depende dela pra funcionar.
+      SATELLITE_BASE_URL: http://host.docker.internal:8001
     depends_on:
       - db
       - redis

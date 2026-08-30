@@ -170,6 +170,80 @@ class TestPerfilViaAPI:
         assert r.status_code == 200
 
 
+class TestHistoricoDoPerfil:
+    """Versionamento do perfil de acessibilidade (ADR-011, rodada 2)."""
+
+    def test_primeira_configuracao_gera_evento(self, vinculo_responsavel, estudante):
+        vinculo_responsavel.put(f'/api/accessibility/{estudante.id}', json={
+            'respostas': {'sensibilidade_sensorial': 'sim'},
+        })
+
+        r = vinculo_responsavel.get(f'/api/accessibility/{estudante.id}/history')
+        assert r.status_code == 200
+
+        eventos = r.get_json()['data']
+        assert len(eventos) == 1
+        assert eventos[0]['tipo'] == 'respostas'
+        assert eventos[0]['mudancas']['sensibilidade_sensorial'] == {
+            'de': None, 'para': 'sim'
+        }
+
+    def test_mudanca_registra_de_e_para(self, vinculo_responsavel, estudante):
+        vinculo_responsavel.put(f'/api/accessibility/{estudante.id}', json={
+            'respostas': {'sensibilidade_sensorial': 'sim'},
+        })
+        vinculo_responsavel.put(f'/api/accessibility/{estudante.id}', json={
+            'respostas': {'sensibilidade_sensorial': 'nao'},
+        })
+
+        eventos = vinculo_responsavel.get(
+            f'/api/accessibility/{estudante.id}/history'
+        ).get_json()['data']
+
+        assert len(eventos) == 2
+        # mais recente primeiro
+        assert eventos[0]['mudancas']['sensibilidade_sensorial'] == {
+            'de': 'sim', 'para': 'nao'
+        }
+
+    def test_responder_o_mesmo_nao_gera_evento(self, vinculo_responsavel, estudante):
+        corpo = {'respostas': {'sensibilidade_sensorial': 'sim'}}
+        vinculo_responsavel.put(f'/api/accessibility/{estudante.id}', json=corpo)
+        vinculo_responsavel.put(f'/api/accessibility/{estudante.id}', json=corpo)
+
+        eventos = vinculo_responsavel.get(
+            f'/api/accessibility/{estudante.id}/history'
+        ).get_json()['data']
+        assert len(eventos) == 1
+
+    def test_ajuste_da_crianca_tambem_gera_evento(self, estudante):
+        estudante.put('/api/accessibility/me/comfort',
+                      json={'ajustes': {'estimulo': 'calmo'}})
+
+        eventos = estudante.get(
+            f'/api/accessibility/{estudante.id}/history'
+        ).get_json()['data']
+
+        assert len(eventos) == 1
+        assert eventos[0]['tipo'] == 'ajustes_crianca'
+        assert eventos[0]['autor_id'] == estudante.id
+
+    def test_professor_da_turma_consulta_historico(
+        self, professor, turma, vinculo_responsavel, estudante
+    ):
+        vinculo_responsavel.put(f'/api/accessibility/{estudante.id}', json={
+            'respostas': {'leitura': 'ainda_nao'},
+        })
+
+        r = professor.get(f'/api/accessibility/{estudante.id}/history')
+        assert r.status_code == 200
+        assert len(r.get_json()['data']) == 1
+
+    def test_responsavel_nao_ve_historico_de_aluno_alheio(self, responsavel, estudante):
+        r = responsavel.get(f'/api/accessibility/{estudante.id}/history')
+        assert r.status_code == 403
+
+
 class TestPainelDeConforto:
     def test_crianca_ajusta_a_propria_tela(self, estudante):
         r = estudante.put('/api/accessibility/me/comfort',

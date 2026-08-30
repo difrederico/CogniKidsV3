@@ -193,13 +193,59 @@ class TestFluxoEstudante:
 
 
 class TestFluxoResponsavel:
-    def test_vincula_filho_e_o_lista(self, responsavel, estudante):
-        r = responsavel.post('/api/parents/link-child',
-                             json={'child_email': estudante.email})
-        assert r.status_code == 200
+    def test_vinculo_pedido_fica_pendente_ate_professor_confirmar(
+        self, professor, turma, responsavel, estudante
+    ):
+        """Desde ADR-010: o vinculo nao da acesso sozinho — precisa de
+        confirmacao de um professor da turma do aluno.
+        """
+        pedido = responsavel.post('/api/parents/link-child',
+                                  json={'child_email': estudante.email})
+        assert pedido.status_code == 202
+        assert pedido.get_json()['vinculo_status'] == 'pendente'
 
+        # Ainda pendente: o responsavel nao ve o filho.
+        assert responsavel.get('/api/parents/children').get_json()['total'] == 0
+
+        vinculo_id = pedido.get_json()['vinculo_id']
+        confirmacao = professor.put(f'/api/teachers/link-requests/{vinculo_id}/confirm')
+        assert confirmacao.status_code == 200
+
+        # Confirmado: agora sim aparece.
         filhos = responsavel.get('/api/parents/children')
         assert filhos.get_json()['total'] == 1
+
+    def test_professor_recusa_vinculo_indevido(self, professor, turma, responsavel, estudante):
+        pedido = responsavel.post('/api/parents/link-child',
+                                  json={'child_email': estudante.email})
+        vinculo_id = pedido.get_json()['vinculo_id']
+
+        recusa = professor.put(f'/api/teachers/link-requests/{vinculo_id}/reject')
+        assert recusa.status_code == 200
+
+        assert responsavel.get('/api/parents/children').get_json()['total'] == 0
+
+    def test_pedir_vinculo_ja_confirmado_nao_duplica(
+        self, professor, turma, responsavel, estudante
+    ):
+        primeiro = responsavel.post('/api/parents/link-child',
+                                    json={'child_email': estudante.email})
+        vinculo_id = primeiro.get_json()['vinculo_id']
+        professor.put(f'/api/teachers/link-requests/{vinculo_id}/confirm')
+
+        segundo = responsavel.post('/api/parents/link-child',
+                                   json={'child_email': estudante.email})
+        assert segundo.status_code == 200
+        assert segundo.get_json()['vinculo_status'] == 'confirmado'
+
+    def test_professor_ve_pedido_pendente_na_fila(self, professor, turma, responsavel, estudante):
+        responsavel.post('/api/parents/link-child', json={'child_email': estudante.email})
+
+        r = professor.get('/api/teachers/link-requests/pending')
+        assert r.status_code == 200
+        assert r.get_json()['total'] == 1
+        assert r.get_json()['data'][0]['aluno_nome']
+        assert r.get_json()['data'][0]['responsavel_email'] == responsavel.email
 
     def test_vinculo_falha_para_email_inexistente(self, responsavel):
         r = responsavel.post('/api/parents/link-child',

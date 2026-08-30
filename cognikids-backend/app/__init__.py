@@ -62,6 +62,12 @@ def create_app(config_overrides=None):
     # Limite de upload (galeria de criacoes dos alunos)
     app.config['MAX_CONTENT_LENGTH'] = int(os.getenv('MAX_UPLOAD_BYTES', 5 * 1024 * 1024))
 
+    # URL do gateway do satelite — usada so pela cascata de revogacao de
+    # consentimento (Utils/satellite_client.py, ADR-008/ADR-010). Opcional
+    # por natureza: o core continua funcionando sem o satelite (CLAUDE.md
+    # secao 2), entao a ausencia desta variavel nunca impede o core de subir.
+    app.config['SATELLITE_BASE_URL'] = os.getenv('SATELLITE_BASE_URL', 'http://localhost:8001')
+
     if config_overrides:
         app.config.update(config_overrides)
 
